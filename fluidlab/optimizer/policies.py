@@ -135,6 +135,7 @@ class MousePolicy_vxz(MousePolicy):
 
 class TrainablePolicy:
     def __init__(self, optim_cfg, init_range, action_dim, horizon, action_range, fix_dim=None):
+        self.init_range = init_range
         self.horizon = horizon
         self.action_dim = action_dim
         self.actions_v = np.random.uniform(init_range.v[0], init_range.v[1], size=(horizon, action_dim))
@@ -393,14 +394,14 @@ class TorchGatheringPolicy(TrainablePolicy):
         onnx_model = onnx.load(onnx_model_path)
         self.pytorch_model = ConvertModel(onnx_model)
 
-        # self.pytorch_model = torch.load('/home/zhx/PycharmProjects/fluids/FluidLab_3_28/fluidlab/optimizer/model/gatheringEasy/model.pth')
+        # self.pytorch_model = torch.load('/home/zhx/Project/FluidLab/fluidlab/runs/gatheringSand/model.pth')
         # self.pytorch_model.train()
-        print(self.pytorch_model)
+        # print(self.pytorch_model)
 
-        self.optimizer = optim.Adam(self.pytorch_model.parameters(), lr=1e-5)
+        self.optimizer = optim.Adam(self.pytorch_model.parameters(), lr=1e-4)
 
         # for torch
-        self.actions_v_torch = 840 * [None]
+        self.actions_v_torch = 3000 * [None]
         self.actions_p_torch = [None]
 
     def get_action_v(self, i, agent=None, update=False):
@@ -479,4 +480,8 @@ class TorchGatheringPolicy(TrainablePolicy):
 
         # self.actions[i].backward(grads)
         self.optimizer.step()  # 执行参数更新
+
+    def get_actions_p(self):
+        self.actions_p = np.random.uniform(self.init_range.p[0], self.init_range.p[1], size=(self.action_dim))
+        return self.actions_p
 

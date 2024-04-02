@@ -15,8 +15,8 @@ class GatheringSandEnv(FluidEnv):
         if seed is not None:
             self.seed(seed)
 
-        self.horizon               = 840
-        self.horizon_action        = 840
+        self.horizon               = 3000
+        self.horizon_action        = 3000
         self.target_file           = None
         self._n_obs_ptcls_per_body = 500
         self.loss                  = loss
@@ -44,9 +44,9 @@ class GatheringSandEnv(FluidEnv):
     def setup_statics(self):
         self.taichi_env.add_static(
             file='single_wall.obj',
-            pos=(0.25, 0.5, 0.5),
+            pos=(0.5, 0.5, 0.5),
             euler=(0.0, 0.0, 0.0),
-            scale=(0.5, 1, 1),
+            scale=(1, 1, 1),
             material=TANK,
             has_dynamics=True,
         )
@@ -54,8 +54,8 @@ class GatheringSandEnv(FluidEnv):
     def setup_bodies(self):
         self.taichi_env.add_body(
             type='cube',
-            lower=(0.15, 0.6, 0.35),
-            upper=(0.35, 0.65, 0.65),
+            lower=(0.2, 0.6, 0.45),
+            upper=(0.3, 0.65, 0.55),
             material=ICECREAM,
         )
 

@@ -5,7 +5,7 @@ import taichi as ti
 from fluidlab.utils.misc import is_on_server
 
 from fluidlab.fluidengine.taichi_env import TaichiEnv
-
+import torch
 
 class Solver:
     def __init__(self, env, logger=None, cfg=None):
@@ -60,8 +60,9 @@ class Solver:
 
         for iteration in range(self.cfg.n_iters):
             self.logger.save_policy(policy, iteration)
-            if iteration % 50 == 0:
-                self.render_policy(taichi_env, taichi_env_state, policy, self.env.horizon, self.env.horizon_action, iteration)
+            torch.save(policy.pytorch_model, '/home/zhx/Project/FluidLab/fluidlab/runs/gatheringSand/model.pth')
+            # if iteration % 50 == 0:
+            self.render_policy(taichi_env, taichi_env_state, policy, self.env.horizon, self.env.horizon_action, iteration)
             loss_info, grad = forward_backward(taichi_env_state['state'], policy, self.env.horizon, self.env.horizon_action)
             loss = loss_info['loss']
             loss_info['iteration'] = iteration
@@ -94,6 +95,8 @@ class Solver:
                 self.logger.write_img(img, iteration, i)
             else:
                 taichi_env.render('human')
+
+
 
 def solve_policy(env, logger, cfg):
     env.reset()
