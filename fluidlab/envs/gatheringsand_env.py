@@ -124,6 +124,13 @@ class GatheringSandEnv(FluidEnv):
     def trainable_policy(self, optim_cfg, init_range):
         return TorchGatheringPolicy(optim_cfg, init_range, self.agent.action_dim, self.horizon_action, self.action_range)
 
-    # def get_obs(self):
-    #     obs = self.agent.get_obs()
-    #     return obs
+    def get_obs(self):
+        obs = self.agent.get_obs()
+        filename = "/home/zhx/Project/FluidRobotic/fluidlab/tmp/obs/play/frame_{:03d}.npy".format(self.t)
+        np.save(filename, obs[0])
+        return obs
+
+    def demo_policy(self):
+        init_p = np.array([0.6, 0.7, 0.5])
+        comp_actions_p = init_p
+        return KeyboardPolicy_wz(init_p, v_ang=0.015)

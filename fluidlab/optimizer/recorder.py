@@ -13,8 +13,9 @@ class Recorder:
             os.makedirs(os.path.dirname(self.target_file), exist_ok=True)
 
     def record(self, user_input=False):
-        policy = self.env.demo_policy(user_input)
+        policy = self.env.demo_policy()
         taichi_env = self.env.taichi_env
+
 
         # initialize ...
         taichi_env_state = taichi_env.get_state()
@@ -37,6 +38,7 @@ class Recorder:
         for i in range(self.env.horizon):
             if i < self.env.horizon_action:
                 action = policy.get_action_v(i)
+                # obs = self.env.get_obs()
             else:
                 action = None
             taichi_env.step(action)

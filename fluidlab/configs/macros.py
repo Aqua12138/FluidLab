@@ -134,14 +134,14 @@ FRICTION = {
     BOWL    : 0.0,
     LADDLE  : 0.1,
     CONE    : 8.0,
-    BOTTLE  : 0.1,
+    BOTTLE  : 16,
     PILLAR  : 0.0,
     STIRRER : 8.0,
     PLATE   : 0.1,
 }
 
 MU = {
-    WATER          : 0.0,
+    WATER          : 200.0,
     INVISCID_DEMO  : 0.0,
     INVISCID_DEMO2 : 0.0,
     INVISCID_DEMO3 : 0.0,

@@ -35,7 +35,6 @@ def main():
         cfg = load_config(args.cfg_file)
     else:
         cfg = None
-
     if args.record:
         if cfg is not None:
             env = gym.make(cfg.EXP.env_name, seed=cfg.EXP.seed, loss=False, loss_type='diff', renderer_type=args.renderer_type)
