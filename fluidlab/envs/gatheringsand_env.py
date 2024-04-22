@@ -130,7 +130,7 @@ class GatheringSandEnv(FluidEnv):
             loss_cls=GatheringEasyLoss,
             type=self.loss_type,
             matching_mat=WATER,
-            weights={'dist': 0.1}
+            weights={'dist': 1}
         )
 
     def setup_reward(self):
@@ -138,7 +138,7 @@ class GatheringSandEnv(FluidEnv):
             reward_cls=GatheringEasyReward,
             type=self.loss_type,
             matching_mat=WATER,
-            weights={'dist': 0.1},
+            weights={'dist': 1},
             gamma=self.gamma
         )
 
@@ -200,7 +200,7 @@ class GatheringSandEnv(FluidEnv):
         obs = self.get_sensor_obs()
         reward = self._get_reward()
 
-        self.render("human")
+        # self.render("human")
 
         assert self.t <= self.horizon
         if self.t == self.max_episode_steps:

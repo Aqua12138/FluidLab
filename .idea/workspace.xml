@@ -8,13 +8,6 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/fluidlab/configs/exp_gathering_sand_shac.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/configs/exp_gathering_sand_shac.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/fluidlab/envs/gatheringsand_env.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/envs/gatheringsand_env.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/agents/agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/agents/agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/agents/agent_sensor.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/agents/agent_sensor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/effectors/effector.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/effectors/effector.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/renderers/ggui_renderer.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/renderers/ggui_renderer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/rewards/gatheringeasy_reward.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/rewards/gatheringeasy_reward.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/taichi_env.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/taichi_env.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -60,8 +53,8 @@
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "git-widget-placeholder": "vec__env__4-15",
-    "last_opened_file_path": "/home/zhx/PycharmProjects/fluids/FluidLab-test",
+    "git-widget-placeholder": "shac",
+    "last_opened_file_path": "/home/zhx/Project/human_catkin",
     "nodejs_package_manager_path": "npm",
     "settings.editor.selected.configurable": "preferences.lookFeel",
     "vue.rearranger.settings.migration": "true"
@@ -270,6 +263,11 @@
           <url>file://$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py</url>
           <line>400</line>
           <option name="timeStamp" value="199" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py</url>
+          <line>433</line>
+          <option name="timeStamp" value="201" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>

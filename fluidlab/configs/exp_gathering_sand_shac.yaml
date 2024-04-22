@@ -18,8 +18,8 @@ params:
 
   config:
     name: df_ant_shac
-    actor_learning_rate: 2e-3 # adam
-    critic_learning_rate: 2e-3 # adam
+    actor_learning_rate: 1e-3 # adam
+    critic_learning_rate: 1e-3 # adam
     lr_schedule: linear # ['constant', 'linear']
     target_critic_alpha: 0.2
     obs_rms: True
@@ -34,7 +34,7 @@ params:
     steps_num: 32
     grad_norm: 1.0 
     truncate_grads: True 
-    num_actors: 6
+    num_actors: 4
     save_interval: 400
 
     player:
