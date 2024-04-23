@@ -277,3 +277,6 @@ class GridSensor3D(GridSensor):
         # state = np.concatenate((mesh_state, particle_state), axis=-1)
         return torch.flip(particle_state.permute(1, 0, 2), dims=[0])
 
+    def set_next_state_grad(self):
+        ...
+

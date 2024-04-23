@@ -8,6 +8,16 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/fluidlab/configs/exp_gathering_sand_shac.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/configs/exp_gathering_sand_shac.yaml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/fluidlab/envs/gatheringsand_env.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/envs/gatheringsand_env.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/agents/agent_sensor.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/agents/agent_sensor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/algorithms/models/actor.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/algorithms/models/actor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/algorithms/models/critic.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/algorithms/models/critic.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/effectors/effector.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/effectors/effector.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/rewards/gatheringeasy_reward.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/rewards/gatheringeasy_reward.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/sensor/gridSensor3D.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/sensor/gridSensor3D.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/sensor/vectorSensor.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/sensor/vectorSensor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/simulators/mpm_simulator.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/simulators/mpm_simulator.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/taichi_env.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/taichi_env.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -166,27 +176,27 @@
         </line-breakpoint>
         <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py</url>
-          <line>567</line>
+          <line>579</line>
           <option name="timeStamp" value="94" />
         </line-breakpoint>
         <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py</url>
-          <line>284</line>
+          <line>292</line>
           <option name="timeStamp" value="137" />
         </line-breakpoint>
         <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py</url>
-          <line>601</line>
+          <line>613</line>
           <option name="timeStamp" value="149" />
         </line-breakpoint>
         <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py</url>
-          <line>613</line>
+          <line>625</line>
           <option name="timeStamp" value="150" />
         </line-breakpoint>
         <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py</url>
-          <line>664</line>
+          <line>676</line>
           <option name="timeStamp" value="156" />
         </line-breakpoint>
         <line-breakpoint suspend="THREAD" type="python-line">
@@ -196,7 +206,7 @@
         </line-breakpoint>
         <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py</url>
-          <line>311</line>
+          <line>319</line>
           <option name="timeStamp" value="159" />
         </line-breakpoint>
         <line-breakpoint suspend="THREAD" type="python-line">
@@ -204,70 +214,80 @@
           <line>277</line>
           <option name="timeStamp" value="160" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+        <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py</url>
-          <line>529</line>
+          <line>541</line>
           <option name="timeStamp" value="172" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+        <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py</url>
-          <line>585</line>
+          <line>597</line>
           <option name="timeStamp" value="177" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+        <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py</url>
-          <line>481</line>
+          <line>493</line>
           <option name="timeStamp" value="178" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+        <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py</url>
-          <line>578</line>
+          <line>590</line>
           <option name="timeStamp" value="187" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+        <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py</url>
-          <line>466</line>
+          <line>478</line>
           <option name="timeStamp" value="189" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+        <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py</url>
-          <line>468</line>
+          <line>480</line>
           <option name="timeStamp" value="190" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+        <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py</url>
-          <line>414</line>
+          <line>426</line>
           <option name="timeStamp" value="191" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+        <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/fluidlab/fluidengine/algorithms/utils/torch_utils.py</url>
           <line>209</line>
           <option name="timeStamp" value="192" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+        <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py</url>
-          <line>402</line>
+          <line>414</line>
           <option name="timeStamp" value="194" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+        <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py</url>
-          <line>350</line>
-          <option name="timeStamp" value="197" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py</url>
-          <line>392</line>
+          <line>402</line>
           <option name="timeStamp" value="198" />
         </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+        <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py</url>
-          <line>400</line>
+          <line>412</line>
           <option name="timeStamp" value="199" />
+        </line-breakpoint>
+        <line-breakpoint suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py</url>
+          <line>445</line>
+          <option name="timeStamp" value="201" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py</url>
-          <line>433</line>
-          <option name="timeStamp" value="201" />
+          <line>235</line>
+          <option name="timeStamp" value="206" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py</url>
+          <line>360</line>
+          <option name="timeStamp" value="208" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/fluidlab/fluidengine/agents/agent_sensor.py</url>
+          <line>40</line>
+          <option name="timeStamp" value="209" />
         </line-breakpoint>
       </breakpoints>
       <default-breakpoints>

@@ -56,7 +56,6 @@ class Effector:
 
         # for rendering purpose only
         self.latest_pos = ti.Vector.field(3, dtype=ti.f32, shape=(1))
-        self.target_pos = ti.Vector.field(3, dtype=ti.f32, shape=(1))
 
         self.init_ckpt()
 
@@ -287,11 +286,6 @@ class Effector:
     @ti.kernel
     def debug_grad(self, s: ti.i32):
         print("action_buffer", self.action_buffer.grad[s])
-
-    @ti.kernel
-    def set_target(self, target: ti.types.ndarray()):
-        for i in ti.static(range(3)):
-            self.target_pos[0][i] = target[i]
 
     @ti.kernel
     def set_next_state_grad(self, f: ti.i32, grad: ti.types.ndarray()):

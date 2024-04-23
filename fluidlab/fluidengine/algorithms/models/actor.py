@@ -26,6 +26,7 @@ class ActorDeterministicMLP(nn.Module):
                         constant_(x, 0), np.sqrt(2))
                         
         modules = []
+
         for i in range(len(self.layer_dims) - 1):
             modules.append(init_(nn.Linear(self.layer_dims[i], self.layer_dims[i + 1])))
             if i < len(self.layer_dims) - 2:
@@ -55,9 +56,14 @@ class ActorStochasticMLP(nn.Module):
 
         self.layer_dims = [obs_dim] + cfg_network['actor_mlp']['units'] + [action_dim]
 
+        self.simple_visual_encoder = encoders.SimpleVisualEncoder(height=90,
+                                                                  width=180,
+                                                                  initial_channels=2,
+                                                                  output_size=256).to(device)  # 视觉输入维度
+
         init_ = lambda m: model_utils.init(m, nn.init.orthogonal_, lambda x: nn.init.
                         constant_(x, 0), np.sqrt(2))
-        
+
         modules = []
         for i in range(len(self.layer_dims) - 1):
             modules.append(nn.Linear(self.layer_dims[i], self.layer_dims[i + 1]))
@@ -83,7 +89,8 @@ class ActorStochasticMLP(nn.Module):
         return self.logstd
 
     def forward(self, obs, deterministic = False):
-        mu = self.mu_net(obs)
+        cat_obs = torch.cat((self.simple_visual_encoder(obs["gridsensor3"]), obs["vector_obs"]), dim=1)
+        mu = self.mu_net(cat_obs)
 
         if deterministic:
             return mu
@@ -96,7 +103,8 @@ class ActorStochasticMLP(nn.Module):
             return sample
     
     def forward_with_dist(self, obs, deterministic = False):
-        mu = self.mu_net(obs)
+        cat_obs = torch.cat((self.simple_visual_encoder(obs["gridsensor3"]), obs["vector_obs"]), dim=1)
+        mu = self.mu_net(cat_obs)
         std = self.logstd.exp() # (num_actions)
 
         if deterministic:
@@ -107,6 +115,7 @@ class ActorStochasticMLP(nn.Module):
             return sample, mu, std
         
     def evaluate_actions_log_probs(self, obs, actions):
+
         mu = self.mu_net(obs)
 
         std = self.logstd.exp()

@@ -34,13 +34,11 @@ class AgentSensor(Agent):
         sensor = sensor_handle(**sensor_cfg, AgentGameObject=self)
         self.sensors.append(sensor)
 
-    def set_target(self):
-        self.target = np.random.uniform(low=(0.05, 0.05, 0.05), high=(0.95, 0.95, 0.95))
-        self.effectors[0].set_target(self.target)
-        # print("target:", self.target)
-
-    def set_next_state_grad(self, grad):
+    def set_next_vector_grad(self, grad):
         self.effectors[0].set_next_state_grad(self.sim.cur_substep_local, grad)
+
+    def set_next_grid3d_grad(self, grad):
+        self.sensors[0].set_next_state_grad(self.sim.cur_substep_local, grad)
 
 
 

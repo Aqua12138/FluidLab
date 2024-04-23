@@ -134,6 +134,7 @@ class MPMSimulator:
             self.C_np    = np.zeros((self.n_particles, self.dim, self.dim), dtype=DTYPE_NP)
             self.F_np    = np.zeros((self.n_particles, self.dim, self.dim), dtype=DTYPE_NP)
             self.used_np = np.zeros((self.n_particles,), dtype=np.int32)
+            self.body_id_np = np.zeros((self.n_particles,), dtype=np.int32)
         elif self.ckpt_dest == 'cpu' or 'gpu':
             self.ckpt_ram = dict()
         self.actions_buffer = []
@@ -563,7 +564,7 @@ class MPMSimulator:
 
     # ------------------------------------ io -------------------------------------#
     @ti.kernel
-    def readframe(self, f:ti.i32, x: ti.types.ndarray(), v: ti.types.ndarray(), C: ti.types.ndarray(), F: ti.types.ndarray(), used: ti.types.ndarray()):
+    def readframe(self, f:ti.i32, x: ti.types.ndarray(), v: ti.types.ndarray(), C: ti.types.ndarray(), F: ti.types.ndarray(), used: ti.types.ndarray(), body_id: ti.types.ndarray()):
         for i in range(self.n_particles):
             for j in ti.static(range(self.dim)):
                 x[i, j] = self.particles[f, i].x[j]
@@ -571,7 +572,9 @@ class MPMSimulator:
                 for k in ti.static(range(self.dim)):
                     C[i, j, k] = self.particles[f, i].C[j, k]
                     F[i, j, k] = self.particles[f, i].F[j, k]
+
             used[i] = self.particles_ng[f, i].used
+            body_id[i] = self.particles_i[i].body_id
 
     @ti.kernel
     def setframe(self, f:ti.i32, x: ti.types.ndarray(), v: ti.types.ndarray(), C: ti.types.ndarray(), F: ti.types.ndarray(), used: ti.types.ndarray()):
@@ -630,7 +633,8 @@ class MPMSimulator:
             state['C']    = np.zeros((self.n_particles, self.dim, self.dim), dtype=DTYPE_NP)
             state['F']    = np.zeros((self.n_particles, self.dim, self.dim), dtype=DTYPE_NP)
             state['used'] = np.zeros((self.n_particles,), dtype=np.int32)
-            self.readframe(f, state['x'], state['v'], state['C'], state['F'], state['used'])
+            state['body_id'] = np.zeros((self.n_particles,), dtype=np.int32)
+            self.readframe(f, state['x'], state['v'], state['C'], state['F'], state['used'], state['body_id'])
 
         if self.agent is not None:
             state['agent'] = self.agent.get_state(f)
@@ -793,12 +797,13 @@ class MPMSimulator:
             if self.ckpt_dest == 'disk':
                 ckpt = {}
                 if self.has_particles:
-                    self.readframe(0, self.x_np, self.v_np, self.C_np, self.F_np, self.used_np)
+                    self.readframe(0, self.x_np, self.v_np, self.C_np, self.F_np, self.used_np, self.body_id_np)
                     ckpt['x']       = self.x_np
                     ckpt['v']       = self.v_np
                     ckpt['C']       = self.C_np
                     ckpt['F']       = self.F_np
                     ckpt['used']    = self.used_np
+                    ckpt['body_id'] = self.body_id_np
                     ckpt['actions'] = self.actions_buffer
 
                 if self.smoke_field is not None:

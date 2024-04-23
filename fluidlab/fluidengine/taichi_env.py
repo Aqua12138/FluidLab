@@ -10,7 +10,7 @@ from fluidlab.configs.macros import *
 from fluidlab.utils.misc import *
 
 
-ti.init(arch=ti.gpu, device_memory_GB=1, packed=True)
+ti.init(arch=ti.gpu, device_memory_GB=5, packed=True)
 # ti.init(arch=ti.cuda, device_memory_GB=9)
 
 @ti.data_oriented
@@ -270,5 +270,8 @@ class TaichiEnv:
     def compute_actor_loss_grad(self):
         self.reward.compute_actor_loss_grad()
 
-    def set_next_state_grad(self, grad):
-        self.agent.set_next_state_grad(grad)
+    def set_next_state_grad(self, grad, type):
+        if type == "vector":
+            self.agent.set_next_vector_grad(grad)
+        elif type == "grid3d":
+            self.agent.set_next_grid3d_grad(grad)

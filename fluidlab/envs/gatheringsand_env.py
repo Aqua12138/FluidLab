@@ -47,7 +47,7 @@ class GatheringSandEnv(FluidEnv):
         self.gym_misc()
     def gym_misc(self):
         self.observation_space = spaces.Dict({
-            'gridsensor3': spaces.Box(low=0, high=1, shape=(90, 180, 1), dtype=np.float32),
+            'gridsensor3': spaces.Box(low=0, high=1, shape=(90, 180, 2), dtype=np.float32),
             'vector_obs': spaces.Box(low=0, high=1, shape=(7,), dtype=np.float32),
             # 更多传感器可以继续添加
         })
@@ -70,20 +70,20 @@ class GatheringSandEnv(FluidEnv):
     def setup_bodies(self):
         self.taichi_env.add_body(
             type='cube',
-            lower=(0.55, 0.3, 0.45),
-            upper=(0.56, 0.31, 0.46),
+            lower=(0.05, 0.3, 0.17),
+            upper=(0.95, 0.45, 0.83),
             material=WATER,
         )
-        # self.taichi_env.add_body(
-        #     type='mesh',
-        #     file='duck.obj',
-        #     pos=(0.22, 0.5, 0.45),
-        #     scale=(0.10, 0.10, 0.10),
-        #     euler=(0, -75.0, 0.0),
-        #     color=(1.0, 1.0, 0.3, 1.0),
-        #     filling='grid',
-        #     material=RIGID,
-        # )
+        self.taichi_env.add_body(
+            type='mesh',
+            file='duck.obj',
+            pos=(0.22, 0.5, 0.45),
+            scale=(0.10, 0.10, 0.10),
+            euler=(0, -75.0, 0.0),
+            color=(1.0, 1.0, 0.3, 1.0),
+            filling='grid',
+            material=RIGID,
+        )
         # self.taichi_env.add_body(
         #     type='mesh',
         #     file='duck.obj',
@@ -137,7 +137,7 @@ class GatheringSandEnv(FluidEnv):
         self.taichi_env.setup_reward(
             reward_cls=GatheringEasyReward,
             type=self.loss_type,
-            matching_mat=WATER,
+            matching_mat=RIGID,
             weights={'dist': 1},
             gamma=self.gamma
         )
@@ -183,7 +183,6 @@ class GatheringSandEnv(FluidEnv):
             # randomize the init state
             init_state = self._init_state
             self.taichi_env.set_state(init_state['state'], grad_enabled=True)
-            self.agent.set_target()
         else:
             init_state = self._init_state
             self.taichi_env.set_state(init_state['state'], grad_enabled=True)
@@ -242,7 +241,9 @@ class GatheringSandEnv(FluidEnv):
         self.sim_substep_global = self.taichi_env.simulator.cur_substep_global
         self.taichi_t = self.taichi_env.t
 
-    def set_next_state_grad(self, grad):
-        self.taichi_env.set_next_state_grad(grad)
+    def set_next_vector_grad(self, grad):
+        self.taichi_env.set_next_state_grad(grad, "vector")
 
+    def set_next_grid3d_grad(self, grad):
+        self.taichi_env.set_next_state_grad(grad, "grid3d")
 
