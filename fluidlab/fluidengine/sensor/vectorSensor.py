@@ -6,9 +6,10 @@ from pyquaternion import Quaternion
 
 @ti.data_oriented
 class VectorSensor:
-    def __init__(self, AgentGameObject, device):
+    def __init__(self, AgentGameObject, device, sim):
         self.AgentGameObject = AgentGameObject
         self.device = device
+        self.sim =sim
     def get_obs(self):
         agent_state = self.AgentGameObject.effectors[0].get_state(self.AgentGameObject.sim.cur_substep_local)
         body_id = self.AgentGameObject.sim.get_state()['body_id']

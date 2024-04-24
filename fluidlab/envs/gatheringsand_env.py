@@ -47,7 +47,7 @@ class GatheringSandEnv(FluidEnv):
         self.gym_misc()
     def gym_misc(self):
         self.observation_space = spaces.Dict({
-            'gridsensor3': spaces.Box(low=0, high=1, shape=(90, 180, 2), dtype=np.float32),
+            'gridsensor3': spaces.Box(low=0, high=1, shape=(180, 90, 2), dtype=np.float32),
             'vector_obs': spaces.Box(low=0, high=1, shape=(7,), dtype=np.float32),
             # 更多传感器可以继续添加
         })
@@ -65,7 +65,16 @@ class GatheringSandEnv(FluidEnv):
         self.agent = self.taichi_env.agent
 
     def setup_statics(self):
+        # self.taichi_env.add_static(
+        #     file='tank.obj',
+        #     pos=(0.5, 0.4, 0.5),
+        #     euler=(0.0, 0.0, 0.0),
+        #     scale=(1.0, 0.92, 0.92),
+        #     material=TANK,
+        #     has_dynamics=False,
+        # )
         ...
+
 
     def setup_bodies(self):
         self.taichi_env.add_body(
@@ -161,10 +170,11 @@ class GatheringSandEnv(FluidEnv):
                             "DistanceNormalization": 1,
                             "ObservationStacks": 1,
                             "device": self.device,
-                            "n_particles": self.taichi_env.simulator.n_particles}
+                            "n_particles": self.taichi_env.simulator.n_particles,
+                            "ckpt_dest": self.taichi_env.ckpt_dest}
         vector_cfg = {"device": self.device}
 
-        self.agent.add_sensor(sensor_handle=GridSensor3D, sensor_cfg=gridsensor3d_cfg)
+        self.agent.add_sensor(sensor_handle=GridSensor3DGrad, sensor_cfg=gridsensor3d_cfg)
         # self.agent.add_sensor(sensor_handle=GridSensor2D, sensor_cfg=gridsensor2d_cfg)
         self.agent.add_sensor(sensor_handle=VectorSensor, sensor_cfg=vector_cfg)
 
@@ -197,6 +207,8 @@ class GatheringSandEnv(FluidEnv):
         self.taichi_env.step(action)
 
         obs = self.get_sensor_obs()
+        filename = "/home/zhx/PycharmProjects/fluids/FluidLab-test/debug/gridsensor3d/frame_{:03d}.npy".format(self.t)
+        np.save(filename, obs['gridsensor3'])
         reward = self._get_reward()
 
         # self.render("human")

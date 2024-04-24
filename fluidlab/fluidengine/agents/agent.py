@@ -137,7 +137,6 @@ class Agent:
             for effector in self.effectors:
                 out.append(effector.get_ckpt())
             return out
-
         elif self.ckpt_dest in ['cpu', 'gpu']:
             for effector in self.effectors:
                 effector.get_ckpt(ckpt_name)

@@ -45,11 +45,13 @@ class FluidEnv(gym.Env):
             self.setup_loss()
         if self.reward:
             self.setup_reward()
-            
+
+
         self.taichi_env.build()
-        self._init_state = self.taichi_env.get_state()
 
         self.setup_sensors()
+
+        self._init_state = self.taichi_env.get_state()
         
         print(f'===>  {type(self).__name__} built successfully.')
 

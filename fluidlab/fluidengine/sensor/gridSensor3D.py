@@ -9,7 +9,7 @@ from .gridSensor import GridSensor
 @ti.data_oriented
 class GridSensor3D(GridSensor):
     def __init__(self, SensorName, AgentGameObject, ObservationStacks, CellArc, LatAngleNorth, LatAngleSouth, LonAngle,
-                 MaxDistance, MinDistance, DistanceNormalization, n_particles, device):
+                 MaxDistance, MinDistance, DistanceNormalization, n_particles, device, sim):
         super(GridSensor3D, self).__init__()
         '''
         SensorName: 传感器名字
@@ -241,10 +241,6 @@ class GridSensor3D(GridSensor):
                             ti.atomic_max(mesh_state[longitude_index, latitude_index, i],
                                           normal_d * self.statics[i].is_collide(self.mesh_state[I].x))
 
-                        # for i in ti.static(range(self.n_dynamics)):
-                        #     ti.atomic_max(mesh_state[longitude_index, latitude_index, i + self.n_statics],
-                        #                   normal_d * self.dynamics[i].is_collide(self.f, self.mesh_state[I].x))
-
     def UpdateSensor(self, RL_state, f):
         self.f = f
         agent_state = self.m_AgentGameObject.get_state(f)
@@ -276,6 +272,7 @@ class GridSensor3D(GridSensor):
         #     self.normal_distance_mesh(mesh_state)
         # state = np.concatenate((mesh_state, particle_state), axis=-1)
         return torch.flip(particle_state.permute(1, 0, 2), dims=[0])
+
 
     def set_next_state_grad(self):
         ...

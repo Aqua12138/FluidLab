@@ -189,6 +189,7 @@ class TaichiEnv:
         if self.reward:
             self.reward.step()
 
+
         self.t += 1
 
     def step_grad(self, action=None):

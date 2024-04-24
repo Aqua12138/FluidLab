@@ -81,13 +81,6 @@ class PouringEnv(FluidEnv):
             weights={'EMD': 1.0, 'chamfer': 0.0}
         )
 
-    def setup_loss(self):
-        self.taichi_env.setup_loss(
-            loss_cls=PouringLoss,
-            type=self.loss_type,
-            weights={'dist': 1.0, 'attraction': 1.0}
-        )
-        
     def demo_policy(self):
         init_p = np.array([0.6, 0.7, 0.5])
         comp_actions_p = init_p

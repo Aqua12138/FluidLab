@@ -103,21 +103,12 @@ class MPMSimulator:
             mass    = DTYPE_TI,
         )
 
-        # grid sensor
-        particle_state_gridSensor = ti.types.struct(
-            x = ti.types.vector(self.dim, ti.f32),
-            used=ti.i32,
-            body_id=ti.i32,
-        )
-
         # construct fields
         self.particles    = particle_state.field(shape=(self.max_substeps_local+1, self.n_particles), needs_grad=True, layout=ti.Layout.SOA)
         self.particles_ng = particle_state_ng.field(shape=(self.max_substeps_local+1, self.n_particles), needs_grad=False, layout=ti.Layout.SOA)
         self.particles_render  = particle_state_render.field(shape=(self.n_particles,), needs_grad=False, layout=ti.Layout.SOA)
         self.particles_i  = particle_info.field(shape=(self.n_particles,), needs_grad=False, layout=ti.Layout.SOA)
 
-        self.particle_state_gridSensor = particle_state_gridSensor.field(shape=(self.n_particles,), needs_grad=False,
-                                                                     layout=ti.Layout.SOA)  # 用于更新 Grid sensor
     def setup_grid_fields(self):
         grid_cell_state = ti.types.struct(
             v_in  = ti.types.vector(self.dim, DTYPE_TI), # input momentum/velocity
@@ -523,6 +514,13 @@ class MPMSimulator:
         if not is_none_action:
             self.agent.move_grad(f)
 
+    def step_gridsensor3d(self, f):
+        self.agent.sensors[0].step(f+1)
+
+    def step_gridsensor3d_grad(self, f):
+        self.agent.sensors[0].step_grad(f+1)
+
+
     def substep(self, f, is_none_action):
         if self.has_particles:
             self.reset_grid_and_grad(f)
@@ -538,17 +536,19 @@ class MPMSimulator:
 
         self.agent_move(f, is_none_action)
 
+
         if self.has_particles:
             self.grid_op(f)
             self.g2p(f)
             self.advect(f)
+        self.step_gridsensor3d(f)
 
     def substep_grad(self, f, is_none_action):
+        self.step_gridsensor3d_grad(f)
         if self.has_particles:
             self.advect_grad(f)
             self.g2p.grad(f)
             self.grid_op.grad(f)
-
         self.agent_move_grad(f, is_none_action)
 
         if self.has_particles:
@@ -641,6 +641,7 @@ class MPMSimulator:
 
         if self.smoke_field is not None:
             state['smoke_field'] = self.smoke_field.get_state(s)
+
 
         return state
 
@@ -744,7 +745,6 @@ class MPMSimulator:
 
         if self.cur_substep_local == 0:
             self.memory_to_cache()
-
 
     def step_(self, action=None):
         is_none_action = action is None
@@ -925,16 +925,3 @@ class MPMSimulator:
 
         # print(f'[Backward] Loading step {ckpt_start_step} to {ckpt_end_step} from cache. {t2-t1:.2f}s {t3-t2:.2f}s {t4-t3:.2f}s')
         # print(f'[Backward] Memory reloaded. Now starts from global step {ckpt_start_step}.')
-    @ti.kernel
-    def update_grid_sensor_kernel(self, f: ti.i32):
-        for i in range(self.n_particles):
-            for j in ti.static(range(self.dim)):
-                self.particle_state_gridSensor[i].x[j] = self.particles[f, i].x[j]
-            self.particle_state_gridSensor[i].used = self.particles_ng[f, i].used
-            self.particle_state_gridSensor[i].body_id = self.particles_i[i].body_id
-    def update_gridSensor(self, reset=False):
-        f = self.cur_substep_local
-        self.update_grid_sensor_kernel(f)
-        for gridSensor in self.agent.sensors:
-            if isinstance(gridSensor, GridSensor):
-                gridSensor.UpdateSensor(self.particle_state_gridSensor, f)
