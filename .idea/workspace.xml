@@ -6,18 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="2bbba59c-73a5-4ef2-a53c-b67cee0f9c5c" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/configs/exp_gathering_sand_shac.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/configs/exp_gathering_sand_shac.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/envs/gatheringsand_env.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/envs/gatheringsand_env.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/agents/agent_sensor.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/agents/agent_sensor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/algorithms/models/actor.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/algorithms/models/actor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/algorithms/models/critic.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/algorithms/models/critic.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/effectors/effector.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/effectors/effector.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/rewards/gatheringeasy_reward.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/rewards/gatheringeasy_reward.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/sensor/gridSensor3D.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/sensor/gridSensor3D.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/sensor/vectorSensor.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/sensor/vectorSensor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/simulators/mpm_simulator.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/simulators/mpm_simulator.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/taichi_env.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/taichi_env.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -63,7 +52,7 @@
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "git-widget-placeholder": "shac",
+    "git-widget-placeholder": "shac__no__visual",
     "last_opened_file_path": "/home/zhx/Project/human_catkin",
     "nodejs_package_manager_path": "npm",
     "settings.editor.selected.configurable": "preferences.lookFeel",
