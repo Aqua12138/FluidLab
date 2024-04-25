@@ -65,17 +65,14 @@ class GatheringSandEnv(FluidEnv):
         self.agent = self.taichi_env.agent
 
     def setup_statics(self):
-        # self.taichi_env.add_static(
-        #     file='tank.obj',
-        #     pos=(0.5, 0.4, 0.5),
-        #     euler=(0.0, 0.0, 0.0),
-        #     scale=(1.0, 0.92, 0.92),
-        #     material=TANK,
-        #     has_dynamics=False,
-        # )
-        ...
-
-
+        self.taichi_env.add_static(
+            file='tank.obj',
+            pos=(0.5, 0.4, 0.5),
+            euler=(0.0, 0.0, 0.0),
+            scale=(1.0, 0.92, 0.92),
+            material=TANK,
+            has_dynamics=False,
+        )
     def setup_bodies(self):
         self.taichi_env.add_body(
             type='cube',
@@ -207,7 +204,7 @@ class GatheringSandEnv(FluidEnv):
         self.taichi_env.step(action)
 
         obs = self.get_sensor_obs()
-        filename = "/home/zhx/PycharmProjects/fluids/FluidLab-test/debug/gridsensor3d/frame_{:03d}.npy".format(self.t)
+        filename = "/home/zhx/PycharmProjects/fluids/FluidLab-4-24/debug/gridsensor3d/frame_{:03d}.npy".format(self.t)
         np.save(filename, obs['gridsensor3'])
         reward = self._get_reward()
 

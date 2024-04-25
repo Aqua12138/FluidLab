@@ -40,7 +40,8 @@ class GridSensor3DGrad(GridSensor):
         self.dim = 3
         self.n_particles = n_particles
         self.statics = self.m_AgentGameObject.sim.statics
-        self.n_statics = self.m_AgentGameObject.sim.n_statics
+        # self.n_statics = self.m_AgentGameObject.sim.n_statics
+        self.n_statics = 0
         self.n_bodies = self.m_AgentGameObject.sim.n_bodies
         self.device = device
         # self.agent_groups = self.m_AgentGameObject.sim.agent_groups
@@ -240,20 +241,20 @@ class GridSensor3DGrad(GridSensor):
         # particle
         self.transform_point_particle(f)
         # mesh
-        self.transform_point_mesh(f)
+        # self.transform_point_mesh(f)
         # particle
         self.compute_lat_lon_particle(f)
         # mesh
-        self.compute_lat_lon_mesh(f)
+        # self.compute_lat_lon_mesh(f)
         self.normal_distance_particle(f)
-        self.normal_distance_mesh(f)
+        # self.normal_distance_mesh(f)
 
     def step_grad(self, f):
-        self.normal_distance_mesh.grad(f)
+        # self.normal_distance_mesh.grad(f)
         self.normal_distance_particle.grad(f)
-        self.compute_lat_lon_mesh.grad(f)
+        # self.compute_lat_lon_mesh.grad(f)
         self.compute_lat_lon_particle.grad(f)
-        self.transform_point_mesh.grad(f)
+        # self.transform_point_mesh.grad(f)
         self.transform_point_particle.grad(f)
     def get_obs(self):
         grid_sensor = torch.zeros(((self.m_LonAngle // self.m_CellArc) * 2,
@@ -265,13 +266,13 @@ class GridSensor3DGrad(GridSensor):
         # particle
         self.transform_point_particle(f)
         # mesh
-        self.transform_point_mesh(f)
+        # self.transform_point_mesh(f)
         # particle
         self.compute_lat_lon_particle(f)
         # mesh
-        self.compute_lat_lon_mesh(f)
+        # self.compute_lat_lon_mesh(f)
         self.normal_distance_particle(f)
-        self.normal_distance_mesh(f)
+        # self.normal_distance_mesh(f)
 
     @ti.kernel
     def set_next_state_grad(self, f: ti.i32, grad: ti.types.ndarray()):
@@ -346,11 +347,25 @@ class GridSensor3DGrad(GridSensor):
             self.grid_sensor.grad[t, i, j, k].fill(0)
 
     def reset_grad(self):
+        self.particle_state.grad.fill(0)
+        self.mesh_state.grad.fill(0)
+        self.init_mesh.grad.fill(0)
         self.grid_sensor.grad.fill(0)
-        self.quat.grad.fill(0)
-        self.v.grad.fill(0)
-        self.w.grad.fill(0)
-        self.action_buffer.grad.fill(0)
-        self.action_buffer_p.grad.fill(0)
+
+
+    def reset(self):
+        self.particle_state.fill(0)
+        self.mesh_state.fill(0)
+        self.init_mesh.fill(0)
+        self.grid_sensor.fill(0)
+
+        self.particle_state.grad.fill(0)
+        self.mesh_state.grad.fill(0)
+        self.init_mesh.grad.fill(0)
+        self.grid_sensor.grad.fill(0)
+
+    def clear(self):
+        self.grid_sensor.fill(0)
+
 
 

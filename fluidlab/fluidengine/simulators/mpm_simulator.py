@@ -737,6 +737,7 @@ class MPMSimulator:
         if self.grad_enabled:
             if self.cur_substep_local == 0:
                 self.actions_buffer = []
+                self.agent.sensors[0].clear()
 
         self.step_(action)
 

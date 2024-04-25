@@ -3,7 +3,7 @@ import matplotlib.image as mpimg
 import numpy as np
 
 # 图像文件的路径
-image_path = '/home/zhx/PycharmProjects/fluids/FluidLab-test/debug/gridsensor3d/frame_040.npy'  # 确保路径和文件格式正确
+image_path = '/home/zhx/PycharmProjects/fluids/FluidLab-4-24/debug/gridsensor3d/frame_040.npy'  # 确保路径和文件格式正确
 
 # 加载图像
 img = np.load(image_path)[:, :, :]

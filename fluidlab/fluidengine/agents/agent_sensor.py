@@ -21,6 +21,10 @@ class AgentSensor(Agent):
     @ti.func
     def collide(self, f, pos_world, mat_v, dt):
         return self.rigid.collide(f, pos_world, mat_v, dt)
+    def reset_grad(self):
+        for i in range(self.n_effectors):
+            self.effectors[i].reset_grad()
+        self.sensors[0].reset_grad()
 
     def get_obs(self):
         sensor_obs = []
@@ -43,6 +47,7 @@ class AgentSensor(Agent):
             self.effectors[i].set_state(f, state[i])
         for sensor in self.sensors :
             if isinstance(sensor, GridSensor3DGrad):
+                sensor.reset()
                 sensor.set_obs(f)
     def get_state(self, f):
         out = []

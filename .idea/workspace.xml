@@ -5,23 +5,47 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="2bbba59c-73a5-4ef2-a53c-b67cee0f9c5c" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/debug/draw_image.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/fluidlab/fluidengine/sensor/gridSensorGrad.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/configs/exp_gathering_sand_shac.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/configs/exp_gathering_sand_shac.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/envs/fluid_env.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/envs/fluid_env.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/draw_image.py" beforeDir="false" afterPath="$PROJECT_DIR$/debug/draw_image.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_001.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_001.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_002.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_002.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_003.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_003.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_004.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_004.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_005.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_005.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_006.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_006.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_007.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_007.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_008.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_008.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_009.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_009.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_010.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_010.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_011.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_011.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_012.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_012.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_013.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_013.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_014.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_014.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_015.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_015.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_016.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_016.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_017.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_017.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_018.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_018.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_019.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_019.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_020.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_020.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_021.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_021.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_022.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_022.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_023.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_023.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_024.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_024.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_025.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_025.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_026.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_026.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_027.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_027.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_028.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_028.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_029.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_029.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_030.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_030.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_031.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_031.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_032.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_032.npy" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/debug/gridsensor3d/frame_040.npy" beforeDir="false" afterPath="$PROJECT_DIR$/debug/gridsensor3d/frame_040.npy" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/fluidlab/envs/gatheringsand_env.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/envs/gatheringsand_env.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/envs/pouring_env.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/envs/pouring_env.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/agents/agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/agents/agent.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/agents/agent_sensor.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/agents/agent_sensor.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/algorithms/shac.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/rewards/gatheringeasy_reward.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/rewards/gatheringeasy_reward.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/sensor/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/sensor/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/sensor/gridSensor3D.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/sensor/gridSensor3D.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/sensor/vectorSensor.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/sensor/vectorSensor.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/sensor/gridSensorGrad.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/sensor/gridSensorGrad.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/simulators/mpm_simulator.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/simulators/mpm_simulator.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/fluidengine/taichi_env.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/fluidengine/taichi_env.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/fluidlab/utils/geom.py" beforeDir="false" afterPath="$PROJECT_DIR$/fluidlab/utils/geom.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -38,7 +62,7 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="vec_env" />
+        <entry key="$PROJECT_DIR$" value="shac_no_visual" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
@@ -70,8 +94,8 @@
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",
-    "git-widget-placeholder": "shac",
-    "last_opened_file_path": "/home/zhx/Project/human_catkin",
+    "git-widget-placeholder": "shac__4-24",
+    "last_opened_file_path": "/home/zhx/PycharmProjects/draw",
     "nodejs_package_manager_path": "npm",
     "settings.editor.selected.configurable": "preferences.lookFeel",
     "vue.rearranger.settings.migration": "true"
@@ -296,12 +320,12 @@
         </line-breakpoint>
         <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/fluidlab/fluidengine/sensor/gridSensorGrad.py</url>
-          <line>258</line>
+          <line>259</line>
           <option name="timeStamp" value="216" />
         </line-breakpoint>
         <line-breakpoint suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/fluidlab/fluidengine/sensor/gridSensorGrad.py</url>
-          <line>239</line>
+          <line>240</line>
           <option name="timeStamp" value="217" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
