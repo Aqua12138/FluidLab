@@ -515,36 +515,32 @@ class MPMSimulator:
             self.agent.move_grad(f)
 
     def step_gridsensor3d(self, f):
-        self.agent.sensors[0].step(f+1)
+        self.agent.sensors[0].step(f)
 
     def step_gridsensor3d_grad(self, f):
-        self.agent.sensors[0].step_grad(f+1)
+        self.agent.sensors[0].step_grad(f)
 
 
     def substep(self, f, is_none_action):
+        self.step_gridsensor3d(f)
         if self.has_particles:
             self.reset_grid_and_grad(f)
             self.advect_used(f)
             self.process_unused_particles(f)
-
         self.agent_act(f, is_none_action)
 
         if self.has_particles:
             self.compute_F_tmp(f)
             self.svd(f)
             self.p2g(f)
-
         self.agent_move(f, is_none_action)
-
-
         if self.has_particles:
             self.grid_op(f)
             self.g2p(f)
             self.advect(f)
-        self.step_gridsensor3d(f)
+
 
     def substep_grad(self, f, is_none_action):
-        self.step_gridsensor3d_grad(f)
         if self.has_particles:
             self.advect_grad(f)
             self.g2p.grad(f)
@@ -561,6 +557,7 @@ class MPMSimulator:
         if self.has_particles:
             self.process_unused_particles.grad(f)
             self.advect_used.grad(f)
+        self.step_gridsensor3d_grad(f)
 
     # ------------------------------------ io -------------------------------------#
     @ti.kernel
@@ -737,7 +734,6 @@ class MPMSimulator:
         if self.grad_enabled:
             if self.cur_substep_local == 0:
                 self.actions_buffer = []
-                self.agent.sensors[0].clear()
 
         self.step_(action)
 

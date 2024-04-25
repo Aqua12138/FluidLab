@@ -45,10 +45,7 @@ class AgentSensor(Agent):
     def set_state(self, f, state):
         for i in range(self.n_effectors):
             self.effectors[i].set_state(f, state[i])
-        for sensor in self.sensors :
-            if isinstance(sensor, GridSensor3DGrad):
-                sensor.reset()
-                sensor.set_obs(f)
+        self.sensors[0].step(f)
     def get_state(self, f):
         out = []
         for i in range(self.n_effectors):

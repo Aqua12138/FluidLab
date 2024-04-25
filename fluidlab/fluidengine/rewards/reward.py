@@ -79,6 +79,7 @@ class Reward:
         pass
     @ti.kernel
     def reset_step(self, s: ti.i32):
+        self.rew[None] = 0.0
         self.rew_acc[s] = 0.0
         self.gamma.fill(1.0)
         self.actor_loss.fill(0.0)
