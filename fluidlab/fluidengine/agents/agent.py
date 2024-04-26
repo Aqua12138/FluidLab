@@ -70,6 +70,7 @@ class Agent:
 
     def set_action(self, s, s_global, n_substeps, action):
         action = np.asarray(action).reshape(-1)
+        # print(action)
         assert len(action) == self.action_dims[-1], 'Action length does not match agent specifications.'
         for i in range(self.n_effectors):
             self.effectors[i].set_action(s, s_global, n_substeps, action[self.action_dims[i]:self.action_dims[i+1]])

@@ -2,26 +2,26 @@ params:
   diff_env:
     name: GatheringSand-v0
     stochastic_env: True
-    episode_length: 1280 # 必须是steps_num的整数倍
+    episode_length: 640 # 必须是steps_num的整数倍
     MM_caching_frequency: 16
 
   network:
     actor: ActorStochasticMLP # ActorDeterministicMLP ActorStochasticPPO
     actor_mlp:
-      units: [128, 64, 32]
+      units: [512, 256]
       activation: elu
 
     critic: CriticMLP
     critic_mlp:
-      units: [64, 64]
+      units: [256, 256]
       activation: elu
 
   config:
     name: df_ant_shac
-    actor_learning_rate: 1e-3 # adam
-    critic_learning_rate: 1e-3 # adam
+    actor_learning_rate: 2e-4 # adam
+    critic_learning_rate: 1e-4 # adam
     lr_schedule: linear # ['constant', 'linear']
-    target_critic_alpha: 0.2
+    target_critic_alpha: 0.995
     obs_rms: True
     ret_rms: False
     critic_iterations: 16
@@ -34,7 +34,7 @@ params:
     steps_num: 32
     grad_norm: 1.0 
     truncate_grads: True 
-    num_actors: 1
+    num_actors: 3
     save_interval: 400
 
     player:

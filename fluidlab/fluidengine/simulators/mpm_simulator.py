@@ -28,7 +28,7 @@ class MPMSimulator:
         self.max_substeps_local  = max_substeps_local
         self.max_substeps_global = max_substeps_global
         self.horizon             = horizon
-        self.n_substeps          = int(2e-3 / self.dt)
+        self.n_substeps          = int(2e-2 / self.dt)
         self.max_steps_local     = int(self.max_substeps_local / self.n_substeps)
 
         assert self.n_substeps * self.horizon < self.max_substeps_global
@@ -514,15 +514,7 @@ class MPMSimulator:
         if not is_none_action:
             self.agent.move_grad(f)
 
-    def step_gridsensor3d(self, f):
-        self.agent.sensors[0].step(f)
-
-    def step_gridsensor3d_grad(self, f):
-        self.agent.sensors[0].step_grad(f)
-
-
     def substep(self, f, is_none_action):
-        self.step_gridsensor3d(f)
         if self.has_particles:
             self.reset_grid_and_grad(f)
             self.advect_used(f)
@@ -557,7 +549,6 @@ class MPMSimulator:
         if self.has_particles:
             self.process_unused_particles.grad(f)
             self.advect_used.grad(f)
-        self.step_gridsensor3d_grad(f)
 
     # ------------------------------------ io -------------------------------------#
     @ti.kernel

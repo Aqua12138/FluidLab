@@ -23,12 +23,12 @@ class GatheringSandEnv(FluidEnv):
 
         self.horizon               = max_episode_steps
         self.horizon_action        = max_episode_steps
-        self.max_episode_steps        = max_episode_steps
+        self.max_episode_steps     = max_episode_steps
         self.target_file           = None
         self._n_obs_ptcls_per_body = 500
         self.loss                  = loss
         self.loss_type             = loss_type
-        self.action_range          = np.array([-0.0003, 0.0003])
+        self.action_range          = np.array([-0.007, 0.007])
         self.renderer_type         = renderer_type
         self.stochastic_init       = stochastic_init
         self.device                = device
@@ -39,7 +39,7 @@ class GatheringSandEnv(FluidEnv):
         self.taichi_env = TaichiEnv(
             dim=3,
             particle_density=1e6,
-            max_substeps_local=50,
+            max_substeps_local=200,
             gravity=(0.0, -9.8, 0.0),
             horizon=self.horizon,
         )
@@ -77,7 +77,7 @@ class GatheringSandEnv(FluidEnv):
         self.taichi_env.add_body(
             type='cube',
             lower=(0.05, 0.3, 0.17),
-            upper=(0.95, 0.45, 0.83),
+            upper=(0.95, 0.35, 0.83),
             material=WATER,
         )
         self.taichi_env.add_body(
@@ -189,6 +189,8 @@ class GatheringSandEnv(FluidEnv):
         if self.stochastic_init:
             # randomize the init state
             init_state = self._init_state
+            pos = np.random.uniform((0.5, 0.3, 0.28), (0.9, 0.9, 0.72))
+            init_state['state']['agent'][0][:3] = pos
             self.taichi_env.set_state(init_state['state'], grad_enabled=True)
         else:
             init_state = self._init_state
@@ -197,18 +199,18 @@ class GatheringSandEnv(FluidEnv):
         return self.get_sensor_obs()
 
     def step(self, action: np.ndarray):
-        action *= 0.35 * 2e-3
-        action = np.clip(action, self.action_range[0], self.action_range[1])
+        action *= 0.35 * 2e-2
+        # action = np.clip(action, self.action_range[0], self.action_range[1])
         # print(action)
 
         self.taichi_env.step(action)
 
         obs = self.get_sensor_obs()
-        filename = "/home/zhx/PycharmProjects/fluids/FluidLab-4-24/debug/gridsensor3d/frame_{:03d}.npy".format(self.t)
-        np.save(filename, obs['gridsensor3'])
+        # filename = "/home/zhx/PycharmProjects/fluids/FluidLab-4-24/debug/gridsensor3d/frame_{:03d}.npy".format(self.t)
+        # np.save(filename, obs['gridsensor3'])
         reward = self._get_reward()
 
-        # self.render("human")
+        self.render("human")
 
         assert self.t <= self.horizon
         if self.t == self.max_episode_steps:
@@ -221,7 +223,7 @@ class GatheringSandEnv(FluidEnv):
 
     def step_grad(self, action):
         action *= 0.35 * 2e-2
-        action.clip(self.action_range[0], max=self.action_range[1])
+        # action.clip(self.action_range[0], max=self.action_range[1])
         self.taichi_env.step_grad(action)
 
     def initialize_trajectory(self, s: int):

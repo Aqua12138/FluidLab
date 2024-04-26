@@ -176,7 +176,6 @@ class GGUIRenderer:
             for effector in self.sim.agent.effectors:
                 if effector.mesh is not None:
                     self.scene.mesh(effector.mesh.vertices, effector.mesh.faces, per_vertex_color=effector.mesh.colors)
-                self.scene.particles(effector.target_pos, color=COLOR[EFFECTOR], radius=self.particle_radius*2)
 
         # smoke
         if self.sim.smoke_field is not None:

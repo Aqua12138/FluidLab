@@ -52,38 +52,23 @@ class GridSensor3DGrad(GridSensor):
             longitudes=DTYPE_TI,
             distance=DTYPE_TI
         )
-
+        self.s = 0
         grid_sensor = ti.types.struct(
             distance=DTYPE_TI
         )
 
-
-        self.particle_state = particle_state.field(shape=(self.sim.max_substeps_local+1, self.n_particles,), needs_grad=True,
+        self.particle_state = particle_state.field(shape=(33, self.n_particles,), needs_grad=True,
                                                          layout=ti.Layout.SOA)
-        self.grid_sensor = grid_sensor.field(shape=(self.sim.max_substeps_local+1, (self.m_LonAngle // self.m_CellArc) * 2,
+        self.grid_sensor = grid_sensor.field(shape=(33, (self.m_LonAngle // self.m_CellArc) * 2,
                      (self.m_LatAngleNorth + self.m_LatAngleSouth) // self.m_CellArc, self.n_bodies), needs_grad=True, layout=ti.Layout.SOA)
-        self.init_ckpt()
 
-    def init_ckpt(self):
-        if self.ckpt_dest == 'disk':
-            self.grid_sensor_np = np.zeros(((self.m_LonAngle // self.m_CellArc) * 2,
-                                  (self.m_LatAngleNorth + self.m_LatAngleSouth) // self.m_CellArc,
-                                  self.n_bodies), dtype=DTYPE_NP)
-        elif self.ckpt_dest in ['cpu', 'gpu']:
-            self.ckpt_ram = dict()
-    def setup_dynamic_mesh(self):
-        # 把所有非自身的agent.rigid对象提取出来
-        for group in self.agent_groups:
-            for agent in group.agents:
-                if agent != self.m_AgentGameObject:
-                    self.dynamics.append(agent.rigid.mesh)
     @ti.kernel
-    def transform_point_particle(self, f: ti.i32):
+    def transform_point_particle(self, s: ti.i32, f:ti.i32):
         # 计算point相对agent位置
         for i in range(self.n_particles):
-            self.particle_state[f, i].relative_x[0] = self.sim.particles[f, i].x[0] - self.m_AgentGameObject.effectors[0].pos[f][0]
-            self.particle_state[f, i].relative_x[1] = self.sim.particles[f, i].x[1] - self.m_AgentGameObject.effectors[0].pos[f][1]
-            self.particle_state[f, i].relative_x[2] = self.sim.particles[f, i].x[2] - self.m_AgentGameObject.effectors[0].pos[f][2]
+            self.particle_state[s, i].relative_x[0] = self.sim.particles[f, i].x[0] - self.m_AgentGameObject.effectors[0].pos[f][0]
+            self.particle_state[s, i].relative_x[1] = self.sim.particles[f, i].x[1] - self.m_AgentGameObject.effectors[0].pos[f][1]
+            self.particle_state[s, i].relative_x[2] = self.sim.particles[f, i].x[2] - self.m_AgentGameObject.effectors[0].pos[f][2]
 
             # 获取四元数数据
             a = self.m_AgentGameObject.effectors[0].quat[f][0]
@@ -91,39 +76,39 @@ class GridSensor3DGrad(GridSensor):
             c = -self.m_AgentGameObject.effectors[0].quat[f][2]
             d = -self.m_AgentGameObject.effectors[0].quat[f][3]
             rotation_matrix = quaternion_to_rotation_matrix(a, b, c, d)
-            self.particle_state[f, i].rotated_x = rotation_matrix @ self.particle_state[f, i].relative_x
+            self.particle_state[s, i].rotated_x = rotation_matrix @ self.particle_state[s, i].relative_x
 
     @ti.kernel
-    def compute_lat_lon_particle(self, f: ti.i32):
+    def compute_lat_lon_particle(self, s: ti.i32):
         for i in range(self.n_particles):
             # 提取局部坐标系中的坐标
-            x = self.particle_state[f, i].rotated_x[0]
-            y = self.particle_state[f, i].rotated_x[1]
-            z = self.particle_state[f, i].rotated_x[2]
+            x = self.particle_state[s, i].rotated_x[0]
+            y = self.particle_state[s, i].rotated_x[1]
+            z = self.particle_state[s, i].rotated_x[2]
 
             # 计算纬度和经度
             # 计算纬度
-            self.particle_state[f, i].distance = ti.sqrt(x * x + y * y + z * z)
-            cos_lat_rad = y / self.particle_state[f, i].distance
+            self.particle_state[s, i].distance = ti.sqrt(x * x + y * y + z * z)
+            cos_lat_rad = ti.max(ti.min(y / self.particle_state[s, i].distance, 1.0), -1.0)
             lat_rad = ti.acos(cos_lat_rad)
             lon_rad = ti.atan2(x, -z)
 
-            self.particle_state[f, i].latitudes = lat_rad * (
+            self.particle_state[s, i].latitudes = lat_rad * (
                     180.0 / ti.acos(-1.0))  # acos(-1) is a way to get π in Taichi
-            self.particle_state[f, i].longitudes = lon_rad * (180.0 / ti.acos(-1.0))
+            self.particle_state[s, i].longitudes = lon_rad * (180.0 / ti.acos(-1.0))
 
     @ti.kernel
-    def normal_distance_particle(self, f: ti.i32):
+    def normal_distance_particle(self, s: ti.i32):
         # 清空
         # 1. 判断距离是否在球体内
         for p in range(self.n_particles):
-            if self.particle_state[f, p].distance < self.m_MaxDistance and self.particle_state[f, p].distance > self.m_MinDistance:
+            if self.particle_state[s, p].distance < self.m_MaxDistance and self.particle_state[s, p].distance > self.m_MinDistance:
                 # 2. 判断经度范围和纬度范围
-                if (90 - self.particle_state[f, p].latitudes < self.m_LatAngleNorth and 90 - self.particle_state[f, p].latitudes >= 0) or \
-                        (ti.abs(self.particle_state[f, p].latitudes - 90) < self.m_LatAngleSouth and ti.abs(self.particle_state[f, p].latitudes - 90) >= 0):
-                    if ti.abs(self.particle_state[f, p].longitudes) < self.m_LonAngle:
+                if (90 - self.particle_state[s, p].latitudes < self.m_LatAngleNorth and 90 - self.particle_state[s, p].latitudes >= 0) or \
+                        (ti.abs(self.particle_state[s, p].latitudes - 90) < self.m_LatAngleSouth and ti.abs(self.particle_state[s, p].latitudes - 90) >= 0):
+                    if ti.abs(self.particle_state[s, p].longitudes) < self.m_LonAngle:
                         # 计算加权距离
-                        d = (self.particle_state[f, p].distance - self.m_MinDistance) / (self.m_MaxDistance - self.m_MinDistance)
+                        d = (self.particle_state[s, p].distance - self.m_MinDistance) / (self.m_MaxDistance - self.m_MinDistance)
                         normal_d = 0.0
                         if self.m_DistanceNormalization == 1:
                             normal_d = 1 - d
@@ -132,41 +117,48 @@ class GridSensor3DGrad(GridSensor):
                                         self.m_DistanceNormalization + 1)
                         # 计算经纬度索引
                         longitude_index = ti.cast(
-                            ti.floor((self.particle_state[f, p].longitudes + self.m_LonAngle) / self.m_CellArc), ti.i32)
+                            ti.floor((self.particle_state[s, p].longitudes + self.m_LonAngle) / self.m_CellArc), ti.i32)
                         latitude_index = ti.cast(
                             ti.floor(
-                                 (self.particle_state[f, p].latitudes - (90 - self.m_LatAngleNorth)) / self.m_CellArc),
+                                 (self.particle_state[s, p].latitudes - (90 - self.m_LatAngleNorth)) / self.m_CellArc),
                             ti.i32)
 
                         # 使用 atomic_max 更新 normal_distance 的值
-                        ti.atomic_max(self.grid_sensor[f, longitude_index, latitude_index, self.sim.particles_i[p].body_id].distance, normal_d)
+                        ti.atomic_max(self.grid_sensor[s, longitude_index, latitude_index, self.sim.particles_i[p].body_id].distance, normal_d)
     @ti.kernel
-    def clear_gird_sensor(self, f: ti.i32):
-        for i, j, k in ti.ndrange((self.m_LonAngle // self.m_CellArc) * 2,
-                                  (self.m_LatAngleNorth + self.m_LatAngleSouth) // self.m_CellArc,
-                                  self.n_bodies):
-            self.grid_sensor[f, i, j, k].distance = 0
-    @ti.kernel
-    def get_sensor_data_kernel(self, f: ti.i32, grid_sensor: ti.types.ndarray()):
+    def get_sensor_data_kernel(self, s: ti.i32, grid_sensor: ti.types.ndarray()):
         # 这里假设 output 已经是一个正确维度和类型的 Taichi field
         for i, j, k in ti.ndrange((self.m_LonAngle // self.m_CellArc) * 2,
                                   (self.m_LatAngleNorth + self.m_LatAngleSouth) // self.m_CellArc,
                                   self.n_bodies):
-            grid_sensor[i, j, k] = self.grid_sensor[f, i, j, k].distance
-    def step(self, f):
-        # particle
-        self.transform_point_particle(f)
-        self.compute_lat_lon_particle(f)
-        self.clear_gird_sensor(f)
-        self.normal_distance_particle(f)
+            grid_sensor[i, j, k] = self.grid_sensor[s, i, j, k].distance
 
-    def step_grad(self, f):
-        self.normal_distance_particle.grad(f)
-        self.clear_gird_sensor.grad(f)
-        self.compute_lat_lon_particle.grad(f)
-        self.transform_point_particle.grad(f)
+    @ti.kernel
+    def clear_grid_sensor(self, s: ti.i32):
+        for i, j, k in ti.ndrange((self.m_LonAngle // self.m_CellArc) * 2,
+                                  (self.m_LatAngleNorth + self.m_LatAngleSouth) // self.m_CellArc,
+                                  self.n_bodies):
+            self.grid_sensor[s, i, j, k].distance = 0.0
+    def step(self):
+        self.s = self.s+1
+        self.clear_grid_sensor(self.s)
+        self.transform_point_particle(self.s, self.sim.cur_substep_local)
+        self.compute_lat_lon_particle(self.s)
+        self.normal_distance_particle(self.s)
 
-        self.debug(f)
+    def step_grad(self):
+        self.normal_distance_particle.grad(self.s)
+        self.compute_lat_lon_particle.grad(self.s)
+        self.transform_point_particle.grad(self.s, self.sim.cur_substep_local)
+        self.clear_grid_sensor.grad(self.s)
+        self.s = self.s-1
+
+        # self.debug(self.sim.cur_step_global-1)
+
+    def set_obs(self, s):
+        self.transform_point_particle(s, self.sim.cur_substep_local)
+        self.compute_lat_lon_particle(s)
+        self.normal_distance_particle(s)
     @ti.kernel
     def debug(self, f: ti.i32):
         print(self.sim.particles.grad[f, 0].x[0], self.m_AgentGameObject.effectors[0].pos.grad[f][0], self.particle_state.grad[f, 0].relative_x[0])
@@ -174,78 +166,15 @@ class GridSensor3DGrad(GridSensor):
     def get_obs(self):
         grid_sensor = torch.zeros(((self.m_LonAngle // self.m_CellArc) * 2,
                                    (self.m_LatAngleNorth + self.m_LatAngleSouth) // self.m_CellArc, self.n_bodies), dtype=torch.float32, device=self.device)
-        self.get_sensor_data_kernel(self.sim.cur_substep_local, grid_sensor)
+        self.get_sensor_data_kernel(self.s, grid_sensor)
         return grid_sensor
 
     @ti.kernel
-    def set_next_state_grad(self, f: ti.i32, grad: ti.types.ndarray()):
+    def set_next_state_grad(self, s: ti.i32, grad: ti.types.ndarray()):
         for i, j, k in ti.ndrange((self.m_LonAngle // self.m_CellArc) * 2,
                                   (self.m_LatAngleNorth + self.m_LatAngleSouth) // self.m_CellArc,
                                   self.n_bodies):
-            self.grid_sensor.grad[f, i, j, k].distance = grad[i, j, k]
-
-    @ti.kernel
-    def get_ckpt_kernel(self, grid_sensor_np: ti.types.ndarray()):
-        for i, j, k in ti.ndrange((self.m_LonAngle // self.m_CellArc) * 2,
-                                  (self.m_LatAngleNorth + self.m_LatAngleSouth) // self.m_CellArc,
-                                  self.n_bodies):
-            grid_sensor_np[i, j, k] = self.grid_sensor[0, i, j, k].distance
-    @ti.kernel
-    def set_ckpt_kernel(self, grid_sensor_np: ti.types.ndarray()):
-        for i, j, k in ti.ndrange((self.m_LonAngle // self.m_CellArc) * 2,
-                                  (self.m_LatAngleNorth + self.m_LatAngleSouth) // self.m_CellArc,
-                                  self.n_bodies):
-            self.grid_sensor[0, i, j, k].distance = grid_sensor_np[i, j, k]
-
-    def get_ckpt(self, ckpt_name=None):
-        if self.ckpt_dest == 'disk':
-            ckpt = {
-                'grid_sensor3d'  : self.grid_sensor_np,
-            }
-            self.get_ckpt_kernel(self.grid_sensor_np)
-            return ckpt
-
-        elif self.ckpt_dest in ['cpu', 'gpu']:
-            if not ckpt_name in self.ckpt_ram:
-                if self.ckpt_dest == 'cpu':
-                    device = 'cpu'
-                elif self.ckpt_dest == 'gpu':
-                    device = 'cuda'
-                self.ckpt_ram[ckpt_name] = {
-                    'grid_sensor3d': torch.zeros(((self.m_LonAngle // self.m_CellArc) * 2,
-                                  (self.m_LatAngleNorth + self.m_LatAngleSouth) // self.m_CellArc,
-                                  self.n_bodies), dtype=DTYPE_TC, device=device),
-                }
-            self.get_ckpt_kernel(
-                self.ckpt_ram[ckpt_name]['grid_sensor3d'],
-            )
-    def set_ckpt(self, ckpt=None, ckpt_name=None):
-        if self.ckpt_dest == 'disk':
-            assert ckpt is not None
-        elif self.ckpt_dest in ['cpu', 'gpu']:
-            ckpt = self.ckpt_ram[ckpt_name]
-        self.set_ckpt_kernel(ckpt['grid_sensor3d'])
-
-    @ti.func
-    def copy_frame(self, source, target):
-        for i, j, k in ti.ndrange((self.m_LonAngle // self.m_CellArc) * 2,
-                                  (self.m_LatAngleNorth + self.m_LatAngleSouth) // self.m_CellArc,
-                                  self.n_bodies):
-            self.grid_sensor[target, i, j, k] = self.grid_sensor[source, i, j, k]
-
-    @ti.func
-    def copy_grad(self, source, target):
-        for i, j, k in ti.ndrange((self.m_LonAngle // self.m_CellArc) * 2,
-                                  (self.m_LatAngleNorth + self.m_LatAngleSouth) // self.m_CellArc,
-                                  self.n_bodies):
-            self.grid_sensor.grad[target, i, j, k] = self.grid_sensor.grad[source, i, j, k]
-
-    @ti.func
-    def reset_grad_till_frame(self, f):
-        for t, i, j, k in ti.ndrange(f, (self.m_LonAngle // self.m_CellArc) * 2,
-                                  (self.m_LatAngleNorth + self.m_LatAngleSouth) // self.m_CellArc,
-                                  self.n_bodies):
-            self.grid_sensor.grad[t, i, j, k].fill(0)
+            self.grid_sensor.grad[s, i, j, k].distance = grad[i, j, k]
 
     def reset_grad(self):
         self.particle_state.grad.fill(0)
@@ -256,6 +185,7 @@ class GridSensor3DGrad(GridSensor):
         self.particle_state.grad.fill(0)
         self.grid_sensor.fill(0)
         self.grid_sensor.grad.fill(0)
+        self.set_obs(0)
 
 
 

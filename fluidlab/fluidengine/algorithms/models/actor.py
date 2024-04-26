@@ -75,7 +75,7 @@ class ActorStochasticMLP(nn.Module):
             
         self.mu_net = nn.Sequential(*modules).to(device)
 
-        logstd = cfg_network.get('actor_logstd_init', -1.0)
+        logstd = cfg_network.get('actor_logstd_init', -1)
 
         self.logstd = torch.nn.Parameter(torch.ones(action_dim, dtype=torch.float32, device=device) * logstd)
 
@@ -100,7 +100,7 @@ class ActorStochasticMLP(nn.Module):
             # sample = mu + eps * std
             dist = Normal(mu, std)
             sample = dist.rsample()
-            return sample
+            return torch.tanh(sample)
     
     def forward_with_dist(self, obs, deterministic = False):
         cat_obs = torch.cat((self.simple_visual_encoder(obs["gridsensor3"]), obs["vector_obs"]), dim=1)

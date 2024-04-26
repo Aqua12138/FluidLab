@@ -329,6 +329,7 @@ class SHAC:
             # collect data for critic training
             with torch.no_grad():
                 raw_rew = rew.clone()
+                # print(raw_rew[0])
 
             # nomaliazation the observation
             # self.actor.update_normalization(obs['vector_obs'])
@@ -377,6 +378,7 @@ class SHAC:
             with torch.no_grad():
                 self.episode_loss -= raw_rew
                 self.episode_discounted_loss -= self.episode_gamma * raw_rew
+
                 self.episode_gamma *= self.gamma
                 episode_length = torch.tensor([self.episode_length for i in range(self.num_envs)]).to(self.device)
                 if self.episode_length==self.max_episode_length[0]:
@@ -400,8 +402,8 @@ class SHAC:
         self.env.env_method("save_sim_state")
 
         # 把obs_grad传入对应的self.steps_num步骤位置，也就是episode_length时间步
-        # self.env.set_next_vector_grad(vector_grad)
-        # self.env.set_next_grid3d_grad(grid3d_grad)
+        self.env.set_next_vector_grad(vector_grad)
+        self.env.set_next_grid3d_grad(grid3d_grad)
 
         self.env.env_method("compute_actor_loss_grad")
         # backward

@@ -53,7 +53,7 @@ class Reward:
 
     def reset_grad(self):
         self.rew_acc.grad.fill(0)
-        self.actor_loss.grad.fill(1)
+        self.actor_loss.grad.fill(1/(32*3))
         self.rew.grad.fill(0)
         
     def load_target(self, path):

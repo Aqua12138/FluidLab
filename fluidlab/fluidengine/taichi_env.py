@@ -10,7 +10,7 @@ from fluidlab.configs.macros import *
 from fluidlab.utils.misc import *
 
 
-ti.init(arch=ti.gpu, device_memory_GB=5, packed=True)
+ti.init(arch=ti.gpu, device_memory_GB=6, packed=True)
 # ti.init(arch=ti.cuda, device_memory_GB=9)
 
 @ti.data_oriented
@@ -160,6 +160,7 @@ class TaichiEnv:
     def reset_step(self, s):
         if self.reward is not None:
             self.reward.reset_step(s)
+        self.agent.sensors[0].reset()
 
     def enable_grad(self):
         self.simulator.enable_grad()
@@ -189,13 +190,12 @@ class TaichiEnv:
         if self.reward:
             self.reward.step()
 
-        
-
-
+        self.agent.sensors[0].step()
 
         self.t += 1
 
     def step_grad(self, action=None):
+        self.agent.sensors[0].step_grad()
         if self.reward:
             self.reward.step_grad()
         if self.loss:

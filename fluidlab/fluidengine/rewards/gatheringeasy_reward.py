@@ -56,6 +56,7 @@ class GatheringEasyReward(Reward):
     @ti.kernel
     def clear_losses(self):
         self.dist_reward.fill(0)
+        self.init_dist_reward()
         self.dist_reward.grad.fill(0)
 
     def compute_step_reward(self, s, f):
@@ -66,15 +67,9 @@ class GatheringEasyReward(Reward):
     def compute_step_reward_grad(self, s, f):
         self.compute_reward_kernel.grad(s)
         self.sum_up_reward_kernel.grad(s)
-        self.compute_dist_reward_grad(s, f)
+        self.compute_dist_reward_kernel.grad(s, f)
         # self.debug_grad(f)
 
-    def compute_dist_reward(self, s, f):
-        self.compute_dist_reward_kernel(s, f)
-
-
-    def compute_dist_reward_grad(self, s, f):
-        self.compute_dist_reward_kernel.grad(s, f)
 
     def compute_actor_loss(self):
         self.compute_actor_loss_kernel(self.sim.cur_step_global-1)
@@ -86,9 +81,15 @@ class GatheringEasyReward(Reward):
     def compute_dist_reward_kernel(self, s: ti.i32, f: ti.i32):
         for p in range(self.n_particles):
             if self.particle_used[f, p] and self.particle_mat[p] == self.matching_mat:
-                self.dist_reward[s+1] += ti.abs(self.particle_x[f, p][0] - 0.8) * 0
+                self.dist_reward[s+1] += ti.abs(self.particle_x[f, p][0] - 0.8)
         # for i in ti.static(range(3)):
         #     self.dist_reward[s+1] += ti.abs(self.agent.effectors[0].pos[f][i] - self.agent.effectors[0].target_pos[1][i])
+
+    @ti.func
+    def init_dist_reward(self):
+        for p in range(self.n_particles):
+            if self.particle_used[0, p] and self.particle_mat[p] == self.matching_mat:
+                self.dist_reward[0] += ti.abs(self.particle_x[0, p][0] - 0.8)
 
 
     @ti.kernel
