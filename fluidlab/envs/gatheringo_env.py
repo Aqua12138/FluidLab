@@ -90,7 +90,7 @@ class GatheringOEnv(FluidEnv):
         gl_render = True
         if gl_render:
             self.taichi_env.setup_renderer(
-                type='GL',
+                type='GGUI',
                 # render_particle=True,
                 camera_pos=(0.15, 2.82, 1.5),
                 camera_lookat=(0.5, 0.5, 0.5),

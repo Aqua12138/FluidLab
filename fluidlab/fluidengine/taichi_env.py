@@ -76,10 +76,8 @@ class TaichiEnv:
     def setup_renderer(self, type='GGUI', **kwargs):
         if type == 'GGUI':
             Renderer = GGUIRenderer
-        elif type == 'GL':
-            Renderer = GLRenderer
         else:
-            raise NotImplementedError
+            raise NotImplementedError(f"Renderer type '{type}' is not supported. Only 'GGUI' is available.")
 
         self.renderer = Renderer(**kwargs)
 

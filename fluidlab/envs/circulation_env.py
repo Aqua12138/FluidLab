@@ -92,7 +92,7 @@ class CirculationEnv(FluidEnv):
         # )
 
         self.taichi_env.setup_renderer(
-            type='GL',
+            type='GGUI',
             # render_particle=True,
             camera_pos=(0.5, 12.0, 0.501),
             camera_lookat=(0.5, 0.5, 0.5),

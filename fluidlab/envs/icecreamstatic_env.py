@@ -76,9 +76,10 @@ class IceCreamStaticEnv(FluidEnv):
                         {'pos': (-5.0, 1.5, 0.5), 'color': (0.35, 0.35, 0.35)},
                         {'pos': (5.0, 1.5, 0.5), 'color': (0.5, 0.5, 0.5)}],
             )
-        elif self.renderer_type == 'GL':
+        else:
+            # GL renderer is no longer supported, using GGUI instead
             self.taichi_env.setup_renderer(
-                type='GL',
+                type='GGUI',
                 camera_pos=(4.48, 2.41, -0.84),
                 camera_lookat=(3.64, 1.95, -0.56),
                 fov=18,

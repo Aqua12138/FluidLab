@@ -101,7 +101,7 @@ class TransportingEnv(FluidEnv):
         # )
 
         self.taichi_env.setup_renderer(
-            type='GL',
+            type='GGUI',
             # render_particle=True,
             # res=(960, 960),
             camera_pos=(0.5, 0.5, 3),
