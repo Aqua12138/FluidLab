@@ -257,9 +257,19 @@ def shake_test(env, cfg=None,
         os.makedirs(save_dir, exist_ok=True)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
+        # Convert timesteps to real time (seconds)
+        # 1 simulation step = 2e-3 seconds = 0.002 seconds
+        DT_PER_STEP = 2e-3  # seconds per step
+        time_seconds = np.array(timesteps) * DT_PER_STEP
+        
+        # Convert phase boundaries to time
+        rest_time = rest_steps * DT_PER_STEP
+        move_end_time = (rest_steps + move_steps) * DT_PER_STEP
+        
         # Save data
         data = {
             'timesteps': np.array(timesteps),
+            'time_seconds': time_seconds,  # Add time in seconds
             'n_left': np.array(n_left_list),
             'n_right': np.array(n_right_list),
             'diff': np.array(diff_list),
@@ -267,6 +277,9 @@ def shake_test(env, cfg=None,
             'rest_steps': rest_steps,
             'move_steps': move_steps,
             'observe_steps': observe_steps,
+            'rest_time': rest_time,  # Add time equivalents
+            'move_time': move_steps * DT_PER_STEP,
+            'observe_time': observe_steps * DT_PER_STEP,
             'linear_v_mag': linear_v_mag,
             'threshold': threshold,
         }
@@ -279,31 +292,31 @@ def shake_test(env, cfg=None,
         fig, axes = plt.subplots(2, 2, figsize=(15, 10))
         
         # Plot 1: Particle count difference (left - right)
-        axes[0, 0].plot(timesteps, diff_list, 'b-', linewidth=2, label='Left - Right')
-        axes[0, 0].axvline(x=rest_steps, color='g', linestyle='--', alpha=0.7, label='Start moving')
-        axes[0, 0].axvline(x=rest_steps + move_steps, color='r', linestyle='--', alpha=0.7, label='Stop moving')
-        axes[0, 0].set_xlabel('Time Step')
+        axes[0, 0].plot(time_seconds, diff_list, 'b-', linewidth=2, label='Left - Right')
+        axes[0, 0].axvline(x=rest_time, color='g', linestyle='--', alpha=0.7, label='Start moving')
+        axes[0, 0].axvline(x=move_end_time, color='r', linestyle='--', alpha=0.7, label='Stop moving')
+        axes[0, 0].set_xlabel('Time (s)')
         axes[0, 0].set_ylabel('Particle Count Difference')
         axes[0, 0].set_title('Particle Count Difference (Left - Right)')
         axes[0, 0].grid(True, alpha=0.3)
         axes[0, 0].legend()
         
         # Plot 2: Left and right particle counts
-        axes[0, 1].plot(timesteps, n_left_list, 'r-', linewidth=2, label='Left particles')
-        axes[0, 1].plot(timesteps, n_right_list, 'b-', linewidth=2, label='Right particles')
-        axes[0, 1].axvline(x=rest_steps, color='g', linestyle='--', alpha=0.7, label='Start moving')
-        axes[0, 1].axvline(x=rest_steps + move_steps, color='r', linestyle='--', alpha=0.7, label='Stop moving')
-        axes[0, 1].set_xlabel('Time Step')
+        axes[0, 1].plot(time_seconds, n_left_list, 'r-', linewidth=2, label='Left particles')
+        axes[0, 1].plot(time_seconds, n_right_list, 'b-', linewidth=2, label='Right particles')
+        axes[0, 1].axvline(x=rest_time, color='g', linestyle='--', alpha=0.7, label='Start moving')
+        axes[0, 1].axvline(x=move_end_time, color='r', linestyle='--', alpha=0.7, label='Stop moving')
+        axes[0, 1].set_xlabel('Time (s)')
         axes[0, 1].set_ylabel('Particle Count')
         axes[0, 1].set_title('Left vs Right Particle Counts')
         axes[0, 1].grid(True, alpha=0.3)
         axes[0, 1].legend()
         
         # Plot 3: Agent X position
-        axes[1, 0].plot(timesteps, agent_x_list, 'g-', linewidth=2, label='Agent X position')
-        axes[1, 0].axvline(x=rest_steps, color='g', linestyle='--', alpha=0.7, label='Start moving')
-        axes[1, 0].axvline(x=rest_steps + move_steps, color='r', linestyle='--', alpha=0.7, label='Stop moving')
-        axes[1, 0].set_xlabel('Time Step')
+        axes[1, 0].plot(time_seconds, agent_x_list, 'g-', linewidth=2, label='Agent X position')
+        axes[1, 0].axvline(x=rest_time, color='g', linestyle='--', alpha=0.7, label='Start moving')
+        axes[1, 0].axvline(x=move_end_time, color='r', linestyle='--', alpha=0.7, label='Stop moving')
+        axes[1, 0].set_xlabel('Time (s)')
         axes[1, 0].set_ylabel('X Position')
         axes[1, 0].set_title('Agent X Position Over Time')
         axes[1, 0].grid(True, alpha=0.3)
@@ -313,13 +326,13 @@ def shake_test(env, cfg=None,
         ax2 = axes[1, 1]
         ax2_twin = ax2.twinx()
         
-        line1 = ax2.plot(timesteps, diff_list, 'b-', linewidth=2, label='Particle diff (L-R)')
-        line2 = ax2_twin.plot(timesteps, agent_x_list, 'g-', linewidth=2, label='Agent X')
+        line1 = ax2.plot(time_seconds, diff_list, 'b-', linewidth=2, label='Particle diff (L-R)')
+        line2 = ax2_twin.plot(time_seconds, agent_x_list, 'g-', linewidth=2, label='Agent X')
         
-        ax2.axvline(x=rest_steps, color='g', linestyle='--', alpha=0.7)
-        ax2.axvline(x=rest_steps + move_steps, color='r', linestyle='--', alpha=0.7)
+        ax2.axvline(x=rest_time, color='g', linestyle='--', alpha=0.7)
+        ax2.axvline(x=move_end_time, color='r', linestyle='--', alpha=0.7)
         
-        ax2.set_xlabel('Time Step')
+        ax2.set_xlabel('Time (s)')
         ax2.set_ylabel('Particle Count Difference', color='b')
         ax2_twin.set_ylabel('Agent X Position', color='g')
         ax2.set_title('Combined View: Particle Diff & Agent Position')
