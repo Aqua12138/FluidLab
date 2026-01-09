@@ -10,6 +10,8 @@ from fluidlab.utils.logger import Logger
 from fluidlab.optimizer.solver import solve_policy
 from fluidlab.optimizer.recorder import record_target, replay_policy, replay_target
 from fluidlab.utils.config import load_config
+from fluidlab.optimizer.policies import KeyboardPolicy_vxy_wz, KeyboardPolicy_vxy, KeyboardPolicy_wz
+from fluidlab.utils.misc import is_on_server
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -23,11 +25,112 @@ def get_args():
     parser.add_argument("--replay_target", action='store_true')
     parser.add_argument("--path", type=str, default=None)
     parser.add_argument("--renderer_type", type=str, default='GGUI')
+    parser.add_argument("--keyboard", action='store_true', help='Manually control agent with keyboard, no recording')
 
 
     args = parser.parse_args()
 
     return args
+
+def make_env_with_renderer(env_name, seed, loss, loss_type, renderer_type):
+    """
+    Create environment, only passing renderer_type if the environment supports it.
+    """
+    # Try with renderer_type first
+    try:
+        return gym.make(env_name, seed=seed, loss=loss, loss_type=loss_type, renderer_type=renderer_type)
+    except TypeError:
+        # If renderer_type is not supported, try without it
+        return gym.make(env_name, seed=seed, loss=loss, loss_type=loss_type)
+
+def keyboard_control(env):
+    """
+    Manually control agent with keyboard, no recording.
+    """
+    taichi_env = env.taichi_env
+    
+    # Get initial position from agent
+    if taichi_env.agent is None:
+        print("Error: Environment has no agent to control.")
+        return
+    
+    # Try to use environment's demo_policy if it exists and returns a KeyboardPolicy
+    policy = None
+    if hasattr(env, 'demo_policy'):
+        try:
+            demo_policy = env.demo_policy()
+            # Check if it's a KeyboardPolicy
+            if hasattr(demo_policy, 'keys_activated') or hasattr(demo_policy, 'listener'):
+                policy = demo_policy
+                print("Using environment's keyboard policy")
+        except:
+            pass
+    
+    # If no keyboard policy from demo_policy, create one
+    if policy is None:
+        # Try to get initial position from agent's effector
+        init_p = None
+        if hasattr(taichi_env.agent, 'effectors') and len(taichi_env.agent.effectors) > 0:
+            effector = taichi_env.agent.effectors[0]
+            if hasattr(effector, 'latest_pos'):
+                init_p = effector.latest_pos.to_numpy()[0]
+            elif hasattr(effector, 'init_pos'):
+                init_p = effector.init_pos
+        
+        # Fallback: use default position based on action dimension
+        if init_p is None:
+            action_dim = taichi_env.agent.action_dim
+            if action_dim >= 6:
+                init_p = np.array([0.5, 0.2, 0.5, 0.0, 0.0, 0.0])
+            elif action_dim >= 3:
+                init_p = np.array([0.5, 0.2, 0.5])
+            else:
+                init_p = np.zeros(action_dim)
+        
+        # Select keyboard policy based on action dimension
+        if taichi_env.agent.action_dim >= 6:
+            policy = KeyboardPolicy_vxy_wz(init_p, v_lin=0.003, v_ang=0.003)
+            print("Keyboard controls: 2/4/6/8 for vxy, z/x for wz rotation")
+        elif taichi_env.agent.action_dim >= 3:
+            policy = KeyboardPolicy_vxy(init_p, v_lin=0.003)
+            print("Keyboard controls: 2/4/6/8 for vxy movement")
+        else:
+            policy = KeyboardPolicy_wz(init_p, v_ang=0.003)
+            print("Keyboard controls: z/x for wz rotation")
+    
+    print("Press 'q' to quit, or close the window")
+    
+    # Initialize environment
+    taichi_env_state = taichi_env.get_state()
+    taichi_env.set_state(**taichi_env_state)
+    action_p = policy.get_actions_p()
+    if action_p is not None:
+        taichi_env.apply_agent_action_p(action_p)
+    
+    # Main control loop
+    try:
+        while True:
+            # Get keyboard action
+            action = policy.get_action_v(0)
+            
+            # Step environment
+            taichi_env.step(action)
+            
+            # Render
+            if not is_on_server():
+                taichi_env.render('human')
+            
+            # Check for quit
+            if hasattr(policy, 'keys_activated') and 'q' in policy.keys_activated:
+                print("\nQuitting...")
+                break
+                
+    except KeyboardInterrupt:
+        print("\nKeyboard control stopped.")
+    finally:
+        # Clean up keyboard listener
+        if hasattr(policy, 'listener'):
+            policy.listener.stop()
 
 def main():
     args = get_args()
@@ -36,27 +139,40 @@ def main():
     else:
         cfg = None
 
+    if args.keyboard:
+        if cfg is not None:
+            env = make_env_with_renderer(cfg.EXP.env_name, cfg.EXP.seed, False, 'diff', args.renderer_type)
+        else:
+            if args.env_name:
+                env = make_env_with_renderer(args.env_name, args.seed, False, 'diff', args.renderer_type)
+            else:
+                print("Error: --keyboard requires either --cfg_file or --env_name")
+                return
+        env.reset()
+        keyboard_control(env)
+        return
+
     if args.record:
         if cfg is not None:
-            env = gym.make(cfg.EXP.env_name, seed=cfg.EXP.seed, loss=False, loss_type='diff', renderer_type=args.renderer_type)
+            env = make_env_with_renderer(cfg.EXP.env_name, cfg.EXP.seed, False, 'diff', args.renderer_type)
         else:
-            env = gym.make(args.env_name, seed=args.seed, loss=False, loss_type='diff', renderer_type=args.renderer_type)
+            env = make_env_with_renderer(args.env_name, args.seed, False, 'diff', args.renderer_type)
         record_target(env, path=args.path, user_input=args.user_input)
     elif args.replay_target:
         if cfg is not None:
-            env = gym.make(cfg.EXP.env_name, seed=cfg.EXP.seed, loss=False, loss_type='diff', renderer_type=args.renderer_type)
+            env = make_env_with_renderer(cfg.EXP.env_name, cfg.EXP.seed, False, 'diff', args.renderer_type)
         else:
-            env = gym.make(args.env_name, seed=args.seed, loss=False, loss_type='diff', renderer_type=args.renderer_type)
+            env = make_env_with_renderer(args.env_name, args.seed, False, 'diff', args.renderer_type)
         replay_target(env)
     elif args.replay_policy:
         if cfg is not None:
-            env = gym.make(cfg.EXP.env_name, seed=cfg.EXP.seed, loss=False, loss_type='diff', renderer_type=args.renderer_type)
+            env = make_env_with_renderer(cfg.EXP.env_name, cfg.EXP.seed, False, 'diff', args.renderer_type)
         else:
-            env = gym.make(args.env_name, seed=args.seed, loss=False, loss_type='diff', renderer_type=args.renderer_type)
+            env = make_env_with_renderer(args.env_name, args.seed, False, 'diff', args.renderer_type)
         replay_policy(env, path=args.path)
     else:
         logger = Logger(args.exp_name)
-        env = gym.make(cfg.EXP.env_name, seed=cfg.EXP.seed, loss=True, loss_type='diff', renderer_type=args.renderer_type)
+        env = make_env_with_renderer(cfg.EXP.env_name, cfg.EXP.seed, True, 'diff', args.renderer_type)
         solve_policy(env, logger, cfg.SOLVER)
 
 if __name__ == '__main__':
