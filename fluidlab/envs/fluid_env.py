@@ -29,7 +29,7 @@ class FluidEnv(gym.Env):
         self.gym_misc()
 
     def seed(self, seed):
-        super(FluidEnv, self).seed(seed)
+        # Note: gym.Env.seed() was removed in gym>=0.21, so we only set our own random seed
         misc_utils.set_random_seed(seed)
 
     def build_env(self):

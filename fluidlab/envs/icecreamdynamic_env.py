@@ -66,37 +66,20 @@ class IceCreamDynamicEnv(FluidEnv):
         )
 
     def setup_renderer(self):
-        if self.renderer_type == 'GGUI':
-            self.taichi_env.setup_renderer(
-                res=(960, 960),
-                camera_pos=(3.96, 1.72, 3.99),
-                camera_lookat=(3.24, 1.53, 3.32),
-                # camera_pos=(4.62, 2.37, 0.28),
-                # camera_lookat=(3.81, 1.95, 0.28),
-                # camera_pos=(0.74, 5.65, 0.42),
-                # camera_lookat=(0.6, 1.65, 0.42),
-                fov=30,
-                lights=[{'pos': (0.5, 3.5, 3.5), 'color': (0.5, 0.5, 0.5)},
-                        {'pos': (0.5, 0.5, 3.5), 'color': (0.35, 0.35, 0.35)},
-                        {'pos': (-5.0, 1.5, 0.5), 'color': (0.35, 0.35, 0.35)},
-                        {'pos': (5.0, 1.5, 0.5), 'color': (0.5, 0.5, 0.5)}],
-            )
-        else:
-            # GL renderer is no longer supported, using GGUI instead
-            self.taichi_env.setup_renderer(
-                type='GGUI',
-                # render_particle=True,
-                camera_pos=(3.96, 1.72, 3.99),
-                camera_lookat=(3.24, 1.53, 3.32),
-                fov=30,
-                light_pos=(0.5, 10.0, 5.55),
-                light_lookat=(0.5, 0.5, 0.49),
-                light_fov=60,
-                floor_height=-1.0,
-                camera_far=20,
-            )
-        else:
-            raise NotImplementedError
+        self.taichi_env.setup_renderer(
+            res=(960, 960),
+            camera_pos=(3.96, 1.72, 3.99),
+            camera_lookat=(3.24, 1.53, 3.32),
+            # camera_pos=(4.62, 2.37, 0.28),
+            # camera_lookat=(3.81, 1.95, 0.28),
+            # camera_pos=(0.74, 5.65, 0.42),
+            # camera_lookat=(0.6, 1.65, 0.42),
+            fov=30,
+            lights=[{'pos': (0.5, 3.5, 3.5), 'color': (0.5, 0.5, 0.5)},
+                    {'pos': (0.5, 0.5, 3.5), 'color': (0.35, 0.35, 0.35)},
+                    {'pos': (-5.0, 1.5, 0.5), 'color': (0.35, 0.35, 0.35)},
+                    {'pos': (5.0, 1.5, 0.5), 'color': (0.5, 0.5, 0.5)}],
+        )
 
     def setup_loss(self):
         self.taichi_env.setup_loss(

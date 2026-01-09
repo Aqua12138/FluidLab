@@ -66,31 +66,15 @@ class IceCreamStaticEnv(FluidEnv):
         )
 
     def setup_renderer(self):
-        if self.renderer_type == 'GGUI':
-            self.taichi_env.setup_renderer(
-                camera_pos=(4.48, 2.41, -0.84),
-                camera_lookat=(3.64, 1.95, -0.56),
-                fov=15,
-                lights=[{'pos': (0.5, 3.5, 3.5), 'color': (0.5, 0.5, 0.5)},
-                        {'pos': (0.5, 0.5, 3.5), 'color': (0.35, 0.35, 0.35)},
-                        {'pos': (-5.0, 1.5, 0.5), 'color': (0.35, 0.35, 0.35)},
-                        {'pos': (5.0, 1.5, 0.5), 'color': (0.5, 0.5, 0.5)}],
-            )
-        else:
-            # GL renderer is no longer supported, using GGUI instead
-            self.taichi_env.setup_renderer(
-                type='GGUI',
-                camera_pos=(4.48, 2.41, -0.84),
-                camera_lookat=(3.64, 1.95, -0.56),
-                fov=18,
-                light_pos=(0.5, 10.0, 5.55),
-                light_lookat=(0.5, 0.5, 0.49),
-                light_fov=60,
-                floor_height=-0.5,
-                camera_far=20,
-            )
-        else:
-            raise NotImplementedError
+        self.taichi_env.setup_renderer(
+            camera_pos=(4.48, 2.41, -0.84),
+            camera_lookat=(3.64, 1.95, -0.56),
+            fov=15,
+            lights=[{'pos': (0.5, 3.5, 3.5), 'color': (0.5, 0.5, 0.5)},
+                    {'pos': (0.5, 0.5, 3.5), 'color': (0.35, 0.35, 0.35)},
+                    {'pos': (-5.0, 1.5, 0.5), 'color': (0.35, 0.35, 0.35)},
+                    {'pos': (5.0, 1.5, 0.5), 'color': (0.5, 0.5, 0.5)}],
+        )
 
 
     def setup_loss(self):
