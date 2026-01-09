@@ -43,7 +43,7 @@ def make_env_with_renderer(env_name, seed, loss, loss_type, renderer_type):
         # If renderer_type is not supported, try without it
         return gym.make(env_name, seed=seed, loss=loss, loss_type=loss_type)
 
-def keyboard_control(env):
+def keyboard_control(env, cfg=None):
     """
     Manually control agent with keyboard, no recording.
     """
@@ -55,50 +55,71 @@ def keyboard_control(env):
         return
     
     # Try to use environment's demo_policy if it exists and returns a KeyboardPolicy
-    policy = None
-    if hasattr(env, 'demo_policy'):
-        try:
-            demo_policy = env.demo_policy()
-            # Check if it's a KeyboardPolicy
-            if hasattr(demo_policy, 'keys_activated') or hasattr(demo_policy, 'listener'):
-                policy = demo_policy
-                print("Using environment's keyboard policy")
-        except:
-            pass
-    
     # If no keyboard policy from demo_policy, create one
-    if policy is None:
-        # Try to get initial position from agent's effector
-        init_p = None
+
+    # Try to get initial position from config file first
+    init_p = None
+    if cfg is not None and hasattr(cfg, 'SOLVER') and hasattr(cfg.SOLVER, 'init_range') and hasattr(cfg.SOLVER.init_range, 'p'):
+        init_range_p = cfg.SOLVER.init_range.p
+        if init_range_p and len(init_range_p) > 0:
+            # init_range.p is a tuple of (min, max), we use the first one (min)
+            # Usually min and max are the same, so we can use either
+            init_p = np.array(init_range_p[0])
+    
+    # Fallback: try to get initial position from agent's effector
+    if init_p is None:
         if hasattr(taichi_env.agent, 'effectors') and len(taichi_env.agent.effectors) > 0:
             effector = taichi_env.agent.effectors[0]
-            if hasattr(effector, 'latest_pos'):
-                init_p = effector.latest_pos.to_numpy()[0]
-            elif hasattr(effector, 'init_pos'):
+            if hasattr(effector, 'init_pos'):
                 init_p = effector.init_pos
-        
-        # Fallback: use default position based on action dimension
-        if init_p is None:
-            action_dim = taichi_env.agent.action_dim
-            if action_dim >= 6:
-                init_p = np.array([0.5, 0.2, 0.5, 0.0, 0.0, 0.0])
-            elif action_dim >= 3:
-                init_p = np.array([0.5, 0.2, 0.5])
-            else:
-                init_p = np.zeros(action_dim)
-        
-        # Select keyboard policy based on action dimension
-        if taichi_env.agent.action_dim >= 6:
-            policy = KeyboardPolicy_vxy_wz(init_p, v_lin=0.003, v_ang=0.003)
-            print("Keyboard controls: 2/4/6/8 for vxy, z/x for wz rotation")
-        elif taichi_env.agent.action_dim >= 3:
-            policy = KeyboardPolicy_vxy(init_p, v_lin=0.003)
-            print("Keyboard controls: 2/4/6/8 for vxy movement")
+
+    # Fallback: use default position based on action dimension
+    if init_p is None:
+        action_dim = taichi_env.agent.action_dim
+        if action_dim >= 6:
+            init_p = np.array([0.5, 0.2, 0.5, 0.0, 0.0, 0.0])
+        elif action_dim >= 3:
+            init_p = np.array([0.5, 0.2, 0.5])
         else:
-            policy = KeyboardPolicy_wz(init_p, v_ang=0.003)
-            print("Keyboard controls: z/x for wz rotation")
+            init_p = np.zeros(action_dim)
+
+    # Select keyboard policy based on action dimension
+    if taichi_env.agent.action_dim >= 6:
+        policy = KeyboardPolicy_vxy_wz(init_p, v_lin=0.003, v_ang=0.003)
+        print("\n" + "="*60)
+        print("智能体控制 (Agent Control):")
+        print("  数字键 2/4/6/8: 控制 vxy 方向移动")
+        print("  z/x 键: 控制 wz 旋转")
+        print("  q 键: 退出程序")
+        print("\n视角控制 (Camera Control):")
+        print("  ↑/↓ 箭头键: 前后移动视角")
+        print("  u/i 键: 上下移动视角")
+        print("  鼠标右键 + 拖拽: 旋转视角")
+        print("="*60)
+    elif taichi_env.agent.action_dim >= 3:
+        policy = KeyboardPolicy_vxy(init_p, v_lin=0.003)
+        print("\n" + "="*60)
+        print("智能体控制 (Agent Control):")
+        print("  数字键 2/4/6/8: 控制 vxy 方向移动")
+        print("  q 键: 退出程序")
+        print("\n视角控制 (Camera Control):")
+        print("  ↑/↓ 箭头键: 前后移动视角")
+        print("  u/i 键: 上下移动视角")
+        print("  鼠标右键 + 拖拽: 旋转视角")
+        print("="*60)
+    else:
+        policy = KeyboardPolicy_wz(init_p, v_ang=0.003)
+        print("\n" + "="*60)
+        print("智能体控制 (Agent Control):")
+        print("  z/x 键: 控制 wz 旋转")
+        print("  q 键: 退出程序")
+        print("\n视角控制 (Camera Control):")
+        print("  ↑/↓ 箭头键: 前后移动视角")
+        print("  u/i 键: 上下移动视角")
+        print("  鼠标右键 + 拖拽: 旋转视角")
+        print("="*60)
     
-    print("Press 'q' to quit, or close the window")
+    print("\n提示: 详细控制说明请查看 KEYBOARD_CONTROLS.md")
     
     # Initialize environment
     taichi_env_state = taichi_env.get_state()
@@ -149,7 +170,7 @@ def main():
                 print("Error: --keyboard requires either --cfg_file or --env_name")
                 return
         env.reset()
-        keyboard_control(env)
+        keyboard_control(env, cfg)
         return
 
     if args.record:

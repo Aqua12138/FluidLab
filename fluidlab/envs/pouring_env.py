@@ -15,8 +15,8 @@ class PouringEnv(FluidEnv):
         if seed is not None:
             self.seed(seed)
 
-        self.horizon               = 1000
-        self.horizon_action        = 1000
+        self.horizon               = 3300
+        self.horizon_action        = 3300
         self.target_file           = None
         self._n_obs_ptcls_per_body = 500
         self.loss                  = loss
@@ -28,7 +28,7 @@ class PouringEnv(FluidEnv):
             dim=3,
             particle_density=1e6,
             max_substeps_local=20,
-            gravity=(0.0, -20.0, 0.0),
+            gravity=(0.0, -9.8, 0.0),
             horizon=self.horizon,
         )
         self.build_env()
@@ -44,13 +44,13 @@ class PouringEnv(FluidEnv):
         pass
 
     def setup_bodies(self):
-        self.taichi_env.add_body(
-            type='cylinder',
-            center=(0.6, 0.53, 0.5),
-            height=0.2,
-            radius=0.18,
-            material=MILK,
-        )
+        # self.taichi_env.add_body(
+        #     type='cylinder',
+        #     center=(0.6, 0.53, 0.5),
+        #     height=0.2,
+        #     radius=0.18,
+        #     material=MILK,
+        # )
         self.taichi_env.add_body(
             type='cylinder',
             center=(0.6, 0.73, 0.5),
