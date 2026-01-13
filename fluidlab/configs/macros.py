@@ -18,6 +18,17 @@ INVISCID_DEMO3 = 15
 ICECREAM1      = 16
 THICK_CREAM    = 17  # 非牛顿粘稠材料（剪切变稀，有屈服应力）
 
+# Herschel-Bulkley 模型常见材料
+WATER_NEWTON   = 18  # 牛顿流体（n=1, τ_y=0）
+HONEY          = 19  # 蜂蜜（剪切变稀，n<1）
+KETCHUP        = 20  # 番茄酱（剪切变稀+屈服应力，n<1, τ_y>0）
+TOOTHPASTE     = 21  # 牙膏（剪切变稀+屈服应力，n<1, τ_y>0）
+BLOOD          = 22  # 血液（剪切变稀，n<1）
+PAINT          = 23  # 油漆（剪切变稀，n<1）
+CORNSTARCH     = 24  # 玉米淀粉浆（剪切增稠，n>1）
+SILLY_PUTTY    = 25  # 橡皮泥（剪切增稠，n>1）
+YOGURT         = 26  # 酸奶（剪切变稀+屈服应力，n<1, τ_y>0）
+
 CUP       = 50
 TANK      = 51
 LADDLE    = 52
@@ -30,6 +41,7 @@ PILLAR    = 58
 STIRRER   = 59
 PLATE     = 60
 BOWL      = 61
+TABLE     = 62  # 桌子（静态物体，高摩擦）
 
 FRAME    = 100
 TARGET   = 101
@@ -61,6 +73,15 @@ MAT_NAME = {
     MILK_VIS       : 'milk-viscous',
     COFFEE_VIS     : 'coffee-viscous',
     THICK_CREAM    : 'thick-cream',
+    WATER_NEWTON   : 'water-newton',
+    HONEY          : 'honey',
+    KETCHUP        : 'ketchup',
+    TOOTHPASTE     : 'toothpaste',
+    BLOOD          : 'blood',
+    PAINT          : 'paint',
+    CORNSTARCH     : 'cornstarch',
+    SILLY_PUTTY    : 'silly-putty',
+    YOGURT         : 'yogurt',
 }
 
 ############ material class #############
@@ -83,6 +104,15 @@ MAT_CLASS = {
     MILK_VIS       : MAT_LIQUID,
     COFFEE_VIS     : MAT_LIQUID,
     THICK_CREAM    : MAT_LIQUID,
+    WATER_NEWTON   : MAT_LIQUID,
+    HONEY          : MAT_LIQUID,
+    KETCHUP        : MAT_LIQUID,
+    TOOTHPASTE     : MAT_LIQUID,
+    BLOOD          : MAT_LIQUID,
+    PAINT          : MAT_LIQUID,
+    CORNSTARCH     : MAT_LIQUID,
+    SILLY_PUTTY    : MAT_LIQUID,
+    YOGURT         : MAT_LIQUID,
 }
 
 ############ default color #############
@@ -111,6 +141,15 @@ COLOR = {
     MILK_VIS       : (0.9, 0.9, 0.9, 1.0),
     COFFEE_VIS     : (0.58, 0.42, 0.22, 1.0),
     THICK_CREAM    : (0.95, 0.95, 0.9, 1.0),  # 浅奶油色
+    WATER_NEWTON   : (0.2, 0.5, 0.9, 1.0),   # 蓝色（水）
+    HONEY          : (0.95, 0.75, 0.2, 1.0), # 金黄色（蜂蜜）
+    KETCHUP        : (0.9, 0.1, 0.1, 1.0),   # 红色（番茄酱）
+    TOOTHPASTE     : (0.95, 0.95, 1.0, 1.0), # 白色（牙膏）
+    BLOOD          : (0.6, 0.1, 0.1, 1.0),   # 深红色（血液）
+    PAINT          : (0.9, 0.7, 0.1, 1.0),   # 黄色（油漆）
+    CORNSTARCH     : (1.0, 1.0, 0.9, 1.0),   # 浅黄色（玉米淀粉）
+    SILLY_PUTTY    : (0.8, 0.6, 0.9, 1.0),   # 紫色（橡皮泥）
+    YOGURT         : (1.0, 0.98, 0.9, 1.0),  # 乳白色（酸奶）
 
     CUP       : (0.9, 0.9, 0.9, 1.0),
     TANK      : (0.70, 0.95, 0.96, 0.6),
@@ -124,6 +163,7 @@ COLOR = {
     PILLAR    : (1.0, 1.0, 1.0, 1.0),
     STIRRER   : (1.0, 1.0, 1.0, 1.0),
     PLATE     : (1.0, 1.0, 1.0, 1.0),
+    TABLE     : (0.55, 0.35, 0.20, 1.0),  # 木色（棕色）
 
     FRAME    : (1.0, 0.2, 0.2, 1.0),
     TARGET   : (0.2, 0.9, 0.2, 0.4),
@@ -142,6 +182,7 @@ FRICTION = {
     PILLAR  : 0.0,
     STIRRER : 8.0,
     PLATE   : 0.1,
+    TABLE   : 2.0,  # 桌子，高摩擦系数（防止材料滑动）
 }
 
 MU = {
@@ -155,6 +196,15 @@ MU = {
     MILK_VIS       : 200.0,
     COFFEE_VIS     : 200.0,
     THICK_CREAM    : 350.0,  # 基础粘度（从CONSISTENCY派生，用于向后兼容和mu_max计算）
+    WATER_NEWTON   : 1.0,    # 牛顿流体，低粘度（从CONSISTENCY派生）
+    HONEY          : 5000.0, # 蜂蜜，高粘度（从CONSISTENCY派生）
+    KETCHUP        : 200.0,  # 番茄酱（从CONSISTENCY派生）
+    TOOTHPASTE     : 300.0,  # 牙膏（从CONSISTENCY派生）
+    BLOOD          : 50.0,   # 血液（从CONSISTENCY派生）
+    PAINT          : 150.0,  # 油漆（从CONSISTENCY派生）
+    CORNSTARCH     : 100.0,  # 玉米淀粉（从CONSISTENCY派生）
+    SILLY_PUTTY    : 2000.0, # 橡皮泥（从CONSISTENCY派生）
+    YOGURT         : 400.0,  # 酸奶（从CONSISTENCY派生）
     ELASTIC        : 416.67,
     ELASTIC_DEMO   : 10.0,
     PLASTIC_DEMO   : 160.0,
@@ -176,6 +226,15 @@ LAMDA = {
     MILK_VIS       : 277.78,
     COFFEE_VIS     : 277.78,
     THICK_CREAM    : 277.78,
+    WATER_NEWTON   : 277.78,
+    HONEY          : 277.78,
+    KETCHUP        : 277.78,
+    TOOTHPASTE     : 277.78,
+    BLOOD          : 277.78,
+    PAINT          : 277.78,
+    CORNSTARCH     : 277.78,
+    SILLY_PUTTY    : 277.78,
+    YOGURT         : 277.78,
     ELASTIC        : 277.78,
     ELASTIC_DEMO   : 100.0,
     PLASTIC_DEMO   : 277.78,
@@ -197,6 +256,15 @@ RHO = {
     MILK_VIS       : 1.0,
     COFFEE_VIS     : 1.0,
     THICK_CREAM    : 0.8,  # 密度：略轻于水，模拟奶泡
+    WATER_NEWTON   : 1.0,  # 密度：水
+    HONEY          : 1.4,  # 密度：蜂蜜（比水重）
+    KETCHUP        : 1.1,  # 密度：番茄酱
+    TOOTHPASTE     : 1.2,  # 密度：牙膏
+    BLOOD          : 1.05, # 密度：血液
+    PAINT          : 1.3,  # 密度：油漆
+    CORNSTARCH     : 1.1,  # 密度：玉米淀粉浆
+    SILLY_PUTTY    : 1.2,  # 密度：橡皮泥
+    YOGURT         : 1.05, # 密度：酸奶
     ELASTIC        : 1.0,
     ELASTIC_DEMO   : 1.0,
     PLASTIC_DEMO   : 1.0,
@@ -223,6 +291,15 @@ YIELD_STRESS = {
     MILK_VIS       : 0.0,
     COFFEE_VIS     : 0.0,
     THICK_CREAM    : 15.0,  # 屈服应力：材料需要一定剪切应力才能流动（模拟粘稠奶泡）
+    WATER_NEWTON   : 0.0,   # 屈服应力：牛顿流体，无屈服应力
+    HONEY          : 0.0,   # 屈服应力：蜂蜜，无屈服应力（纯剪切变稀）
+    KETCHUP        : 20.0,  # 屈服应力：番茄酱，有屈服应力（需要挤压才能流动）
+    TOOTHPASTE     : 25.0,  # 屈服应力：牙膏，有屈服应力
+    BLOOD          : 5.0,   # 屈服应力：血液，轻微屈服应力
+    PAINT          : 10.0,  # 屈服应力：油漆，有屈服应力
+    CORNSTARCH     : 0.0,   # 屈服应力：玉米淀粉，无屈服应力（纯剪切增稠）
+    SILLY_PUTTY    : 0.0,   # 屈服应力：橡皮泥，无屈服应力（纯剪切增稠）
+    YOGURT         : 12.0,  # 屈服应力：酸奶，有屈服应力
     ELASTIC        : 0.0,
     ELASTIC_DEMO   : 0.0,
     PLASTIC_DEMO   : 0.0,
@@ -247,6 +324,15 @@ CONSISTENCY = {
     MILK_VIS       : 200.0,   # 使用MU值
     COFFEE_VIS     : 200.0,   # 使用MU值
     THICK_CREAM    : 350.0,   # 稠度系数：控制非牛顿流体的基础粘度（主要粘度参数）
+    WATER_NEWTON   : 1.0,    # 稠度系数：牛顿流体，低粘度（n=1时等于动态粘度）
+    HONEY          : 5000.0, # 稠度系数：蜂蜜，高粘度（主要粘度参数）
+    KETCHUP        : 200.0,  # 稠度系数：番茄酱（主要粘度参数）
+    TOOTHPASTE     : 300.0,  # 稠度系数：牙膏（主要粘度参数）
+    BLOOD          : 50.0,   # 稠度系数：血液（主要粘度参数）
+    PAINT          : 150.0,  # 稠度系数：油漆（主要粘度参数）
+    CORNSTARCH     : 100.0,  # 稠度系数：玉米淀粉（主要粘度参数）
+    SILLY_PUTTY    : 2000.0, # 稠度系数：橡皮泥（主要粘度参数）
+    YOGURT         : 400.0,  # 稠度系数：酸奶（主要粘度参数）
     ELASTIC        : 416.67,  # 使用MU值
     ELASTIC_DEMO   : 10.0,
     PLASTIC_DEMO   : 160.0,
@@ -272,6 +358,15 @@ FLOW_INDEX = {
     MILK_VIS       : 1.0,
     COFFEE_VIS     : 1.0,
     THICK_CREAM    : 0.65,    # 流动指数 < 1：剪切变稀，搅拌时变稀（模拟奶泡特性）
+    WATER_NEWTON   : 1.0,    # 流动指数 = 1：牛顿流体（恒定粘度）
+    HONEY          : 0.5,    # 流动指数 < 1：剪切变稀（n=0.5，强剪切变稀）
+    KETCHUP        : 0.3,    # 流动指数 < 1：剪切变稀（n=0.3，强剪切变稀）
+    TOOTHPASTE     : 0.4,    # 流动指数 < 1：剪切变稀（n=0.4）
+    BLOOD          : 0.7,    # 流动指数 < 1：剪切变稀（n=0.7，轻微剪切变稀）
+    PAINT          : 0.6,    # 流动指数 < 1：剪切变稀（n=0.6）
+    CORNSTARCH     : 1.5,    # 流动指数 > 1：剪切增稠（n=1.5，剪切增稠）
+    SILLY_PUTTY    : 1.3,    # 流动指数 > 1：剪切增稠（n=1.3，剪切增稠）
+    YOGURT         : 0.6,    # 流动指数 < 1：剪切变稀（n=0.6）
     ELASTIC        : 1.0,
     ELASTIC_DEMO   : 1.0,
     PLASTIC_DEMO   : 1.0,
