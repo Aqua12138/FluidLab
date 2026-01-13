@@ -55,7 +55,7 @@ class LatteArtEnv(FluidEnv):
         self.taichi_env.add_body(
             type='nowhere',
             n_particles=60000,
-            material=MILK,
+            material=THICK_CREAM,  # 使用新的非牛顿粘稠材料
         )
         self.taichi_env.add_body(
             type='cylinder',

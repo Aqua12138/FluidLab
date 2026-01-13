@@ -13,6 +13,9 @@ import sys
 import gym
 import argparse
 import numpy as np
+# Set matplotlib backend before importing pyplot to avoid Qt errors
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend by default
 import matplotlib.pyplot as plt
 from datetime import datetime
 
@@ -345,12 +348,26 @@ def shake_test(env, cfg=None,
         plt.tight_layout()
         
         plot_file = os.path.join(save_dir, f'shake_plot_{timestamp}.png')
+        
+        # Use non-interactive backend to avoid Qt errors
+        try:
+            import matplotlib
+            matplotlib.use('Agg')  # Use non-interactive backend
+        except:
+            pass
+        
         plt.savefig(plot_file, dpi=150, bbox_inches='tight')
         print(f"Plot saved to: {plot_file}")
         
-        if not is_on_server():
-            plt.show()
-        else:
+        # Try to show plot, but handle errors gracefully
+        try:
+            if not is_on_server() and os.getenv('DISPLAY') is not None:
+                # Only try to show if we have a display
+                plt.show()
+            else:
+                plt.close()
+        except Exception as e:
+            print(f"Note: Could not display plot (this is OK): {e}")
             plt.close()
         
         print(f"\nResults saved in: {save_dir}")

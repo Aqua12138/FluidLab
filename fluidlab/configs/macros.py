@@ -16,6 +16,7 @@ VISCOUS_DEMO   = 13
 INVISCID_DEMO2 = 14
 INVISCID_DEMO3 = 15
 ICECREAM1      = 16
+THICK_CREAM    = 17  # 非牛顿粘稠材料（剪切变稀，有屈服应力）
 
 CUP       = 50
 TANK      = 51
@@ -59,6 +60,7 @@ MAT_NAME = {
     ICECREAM1       : 'ice-cream1',
     MILK_VIS       : 'milk-viscous',
     COFFEE_VIS     : 'coffee-viscous',
+    THICK_CREAM    : 'thick-cream',
 }
 
 ############ material class #############
@@ -80,6 +82,7 @@ MAT_CLASS = {
     ICECREAM1       : MAT_PLASTO_ELASTIC,
     MILK_VIS       : MAT_LIQUID,
     COFFEE_VIS     : MAT_LIQUID,
+    THICK_CREAM    : MAT_LIQUID,
 }
 
 ############ default color #############
@@ -107,6 +110,7 @@ COLOR = {
     RIGID_LIGHT    : (1.0, 0.5, 0.5, 1.0),
     MILK_VIS       : (0.9, 0.9, 0.9, 1.0),
     COFFEE_VIS     : (0.58, 0.42, 0.22, 1.0),
+    THICK_CREAM    : (0.95, 0.95, 0.9, 1.0),  # 浅奶油色
 
     CUP       : (0.9, 0.9, 0.9, 1.0),
     TANK      : (0.70, 0.95, 0.96, 0.6),
@@ -150,6 +154,7 @@ MU = {
     COFFEE         : 0.0,
     MILK_VIS       : 200.0,
     COFFEE_VIS     : 200.0,
+    THICK_CREAM    : 350.0,  # 基础粘度（从CONSISTENCY派生，用于向后兼容和mu_max计算）
     ELASTIC        : 416.67,
     ELASTIC_DEMO   : 10.0,
     PLASTIC_DEMO   : 160.0,
@@ -170,6 +175,7 @@ LAMDA = {
     COFFEE         : 277.78,
     MILK_VIS       : 277.78,
     COFFEE_VIS     : 277.78,
+    THICK_CREAM    : 277.78,
     ELASTIC        : 277.78,
     ELASTIC_DEMO   : 100.0,
     PLASTIC_DEMO   : 277.78,
@@ -190,6 +196,7 @@ RHO = {
     COFFEE         : 1.0,
     MILK_VIS       : 1.0,
     COFFEE_VIS     : 1.0,
+    THICK_CREAM    : 0.8,  # 密度：略轻于水，模拟奶泡
     ELASTIC        : 1.0,
     ELASTIC_DEMO   : 1.0,
     PLASTIC_DEMO   : 1.0,
@@ -198,6 +205,81 @@ RHO = {
     RIGID          : 1.0,
     RIGID_HEAVY    : 10.0,
     RIGID_LIGHT    : 0.5,
+}
+
+############ Herschel-Bulkley parameters #############
+# Note: For H-B materials, CONSISTENCY (K) is the PRIMARY viscosity parameter.
+# MU is derived from CONSISTENCY for backward compatibility and mu_max calculation.
+
+# Yield stress (τ_y): 屈服应力，当剪切应力小于此值时材料表现为固体
+YIELD_STRESS = {
+    WATER          : 0.0,
+    INVISCID_DEMO  : 0.0,
+    INVISCID_DEMO2 : 0.0,
+    INVISCID_DEMO3 : 0.0,
+    VISCOUS_DEMO   : 0.0,
+    MILK           : 0.0,
+    COFFEE         : 0.0,
+    MILK_VIS       : 0.0,
+    COFFEE_VIS     : 0.0,
+    THICK_CREAM    : 15.0,  # 屈服应力：材料需要一定剪切应力才能流动（模拟粘稠奶泡）
+    ELASTIC        : 0.0,
+    ELASTIC_DEMO   : 0.0,
+    PLASTIC_DEMO   : 0.0,
+    ICECREAM       : 0.0,
+    ICECREAM1       : 0.0,
+    RIGID          : 0.0,
+    RIGID_HEAVY    : 0.0,
+    RIGID_LIGHT    : 0.0,
+}
+
+# Consistency coefficient (K): 稠度系数，控制非牛顿流体的基础粘度
+# PRIMARY viscosity parameter for H-B model. When n=1 and τ_y=0, K equals effective viscosity.
+# MU is derived from CONSISTENCY for mu_max calculation when H-B is enabled.
+CONSISTENCY = {
+    WATER          : 0.0,      # 使用MU值作为默认（牛顿流体）
+    INVISCID_DEMO  : 0.0,
+    INVISCID_DEMO2 : 0.0,
+    INVISCID_DEMO3 : 0.0,
+    VISCOUS_DEMO   : 800.0,   # 使用MU值
+    MILK           : 0.0,
+    COFFEE         : 0.0,
+    MILK_VIS       : 200.0,   # 使用MU值
+    COFFEE_VIS     : 200.0,   # 使用MU值
+    THICK_CREAM    : 350.0,   # 稠度系数：控制非牛顿流体的基础粘度（主要粘度参数）
+    ELASTIC        : 416.67,  # 使用MU值
+    ELASTIC_DEMO   : 10.0,
+    PLASTIC_DEMO   : 160.0,
+    ICECREAM       : 416.67,
+    ICECREAM1       : 216.67,
+    RIGID          : 416.67,
+    RIGID_HEAVY    : 416.67,
+    RIGID_LIGHT    : 416.67,
+}
+
+# Flow index (n): 流动指数
+# n = 1: 牛顿流体
+# n < 1: 剪切变稀 (pseudoplastic)
+# n > 1: 剪切增稠 (dilatant)
+FLOW_INDEX = {
+    WATER          : 1.0,      # 牛顿流体
+    INVISCID_DEMO  : 1.0,
+    INVISCID_DEMO2 : 1.0,
+    INVISCID_DEMO3 : 1.0,
+    VISCOUS_DEMO   : 1.0,      # 牛顿流体（高粘度）
+    MILK           : 1.0,
+    COFFEE         : 1.0,
+    MILK_VIS       : 1.0,
+    COFFEE_VIS     : 1.0,
+    THICK_CREAM    : 0.65,    # 流动指数 < 1：剪切变稀，搅拌时变稀（模拟奶泡特性）
+    ELASTIC        : 1.0,
+    ELASTIC_DEMO   : 1.0,
+    PLASTIC_DEMO   : 1.0,
+    ICECREAM       : 1.0,
+    ICECREAM1       : 1.0,
+    RIGID          : 1.0,
+    RIGID_HEAVY    : 1.0,
+    RIGID_LIGHT    : 1.0,
 }
 
 ############ dtype #############

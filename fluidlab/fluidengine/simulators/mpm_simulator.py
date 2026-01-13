@@ -94,12 +94,16 @@ class MPMSimulator:
 
         # particle info
         particle_info = ti.types.struct(
-            mu      = DTYPE_TI,
-            lam     = DTYPE_TI,
-            mat     = ti.i32,
-            mat_cls = ti.i32,
-            body_id = ti.i32,
-            mass    = DTYPE_TI,
+            mu                = DTYPE_TI,
+            lam               = DTYPE_TI,
+            mat               = ti.i32,
+            mat_cls           = ti.i32,
+            body_id           = ti.i32,
+            mass              = DTYPE_TI,
+            yield_stress      = DTYPE_TI,  # Herschel-Bulkley: τ_y
+            consistency       = DTYPE_TI,   # Herschel-Bulkley: K
+            flow_index        = DTYPE_TI,   # Herschel-Bulkley: n
+            use_herschel_bulkley = ti.i32,  # Flag to enable H-B model
         )
 
         # construct fields
@@ -143,21 +147,34 @@ class MPMSimulator:
         mu         = np.array([MU[mat_i] for mat_i in mat]).astype(DTYPE_NP)
         lam        = np.array([LAMDA[mat_i] for mat_i in mat]).astype(DTYPE_NP)
         mat_cls    = np.array([MAT_CLASS[mat_i] for mat_i in mat]).astype(np.int32)
+        
+        # Herschel-Bulkley parameters
+        yield_stress = np.array([YIELD_STRESS.get(mat_i, 0.0) for mat_i in mat]).astype(DTYPE_NP)
+        consistency  = np.array([CONSISTENCY.get(mat_i, MU.get(mat_i, 0.0)) for mat_i in mat]).astype(DTYPE_NP)
+        flow_index   = np.array([FLOW_INDEX.get(mat_i, 1.0) for mat_i in mat]).astype(DTYPE_NP)
+        # Enable H-B if any parameter is non-default (yield_stress > 0 or flow_index != 1.0)
+        use_hb = np.array([1 if (yield_stress[i] > 1e-6 or abs(flow_index[i] - 1.0) > 1e-6) else 0 
+                          for i in range(len(mat))]).astype(np.int32)
 
-        self.init_particles_kernel(x, mat, mat_cls, used, mu, lam, p_rho, body_id)
+        self.init_particles_kernel(x, mat, mat_cls, used, mu, lam, p_rho, body_id, 
+                                   yield_stress, consistency, flow_index, use_hb)
         self.init_bodies(mat_cls, body_id, particles['bodies'])
 
     @ti.kernel
     def init_particles_kernel(
             self,
-            x       : ti.types.ndarray(),
-            mat     : ti.types.ndarray(),
-            mat_cls : ti.types.ndarray(),
-            used    : ti.types.ndarray(),
-            mu      : ti.types.ndarray(),
-            lam     : ti.types.ndarray(),
-            p_rho   : ti.types.ndarray(),
-            body_id : ti.types.ndarray()
+            x            : ti.types.ndarray(),
+            mat          : ti.types.ndarray(),
+            mat_cls      : ti.types.ndarray(),
+            used         : ti.types.ndarray(),
+            mu           : ti.types.ndarray(),
+            lam          : ti.types.ndarray(),
+            p_rho        : ti.types.ndarray(),
+            body_id      : ti.types.ndarray(),
+            yield_stress : ti.types.ndarray(),
+            consistency  : ti.types.ndarray(),
+            flow_index   : ti.types.ndarray(),
+            use_hb       : ti.types.ndarray()
         ):
         for i in range(self.n_particles):
             for j in ti.static(range(self.dim)):
@@ -167,12 +184,16 @@ class MPMSimulator:
             self.particles[0, i].C       = ti.Matrix.zero(DTYPE_TI, self.dim, self.dim)
             self.particles_ng[0, i].used = used[i]
 
-            self.particles_i[i].mat     = mat[i]
-            self.particles_i[i].mat_cls = mat_cls[i]
-            self.particles_i[i].mu      = mu[i]
-            self.particles_i[i].lam     = lam[i]
-            self.particles_i[i].mass    = self.p_vol * p_rho[i]
-            self.particles_i[i].body_id = body_id[i]
+            self.particles_i[i].mat                = mat[i]
+            self.particles_i[i].mat_cls            = mat_cls[i]
+            self.particles_i[i].mu                 = mu[i]
+            self.particles_i[i].lam                = lam[i]
+            self.particles_i[i].mass               = self.p_vol * p_rho[i]
+            self.particles_i[i].body_id            = body_id[i]
+            self.particles_i[i].yield_stress       = yield_stress[i]
+            self.particles_i[i].consistency       = consistency[i]
+            self.particles_i[i].flow_index         = flow_index[i]
+            self.particles_i[i].use_herschel_bulkley = use_hb[i]
 
     def init_bodies(self, mat_cls, body_id, bodies):
         self.n_bodies = bodies['n']
@@ -328,6 +349,70 @@ class MPMSimulator:
     def stencil_range(self):
         return ti.ndrange(*((3, ) * self.dim))
 
+    @ti.func
+    def compute_shear_rate(self, C):
+        """
+        Compute shear rate from velocity gradient C.
+        Returns: scalar shear rate γ̇
+        """
+        # Compute deformation rate tensor D = (C + C^T) / 2
+        D = 0.5 * (C + C.transpose())
+        
+        # Compute shear rate: γ̇ = sqrt(2 * trace(D^T @ D))
+        # Using Frobenius norm: ||D||_F = sqrt(sum(D_ij^2))
+        D_squared = D @ D.transpose()
+        trace_D_squared = 0.0
+        for i in ti.static(range(self.dim)):
+            trace_D_squared += D_squared[i, i]
+        
+        # Shear rate: γ̇ = sqrt(2 * ||D||_F^2) = sqrt(2 * trace(D^T @ D))
+        shear_rate = ti.sqrt(2.0 * trace_D_squared)
+        
+        # Clamp to minimum value for numerical stability (1e-6 for gradient stability)
+        return ti.max(shear_rate, 1e-6)
+
+    @ti.func
+    def compute_effective_viscosity(self, shear_rate, yield_stress, k, n, mu_base, m=100.0):
+        """
+        Compute effective viscosity using Herschel-Bulkley model with Papanastasiou regularization.
+        
+        Note: CONSISTENCY (k) is the PRIMARY viscosity parameter.
+        When n=1 and τ_y=0, μ_eff = k (constant viscosity, Newtonian fluid).
+        mu_base is used only for computing mu_max (numerical stability).
+        
+        Args:
+            shear_rate: scalar shear rate γ̇
+            yield_stress: yield stress τ_y
+            k: consistency coefficient K (PRIMARY viscosity parameter)
+            n: flow index n
+            mu_base: base viscosity (for computing mu_max, typically equals k)
+            m: Papanastasiou regularization parameter (default 100.0)
+        
+        Returns:
+            effective viscosity μ_eff
+        """
+        # Ensure shear_rate is at least 1e-6 for numerical stability
+        sr = ti.max(shear_rate, 1e-6)
+        
+        # Papanastasiou regularization for yield stress term
+        # When sr -> 0: (1-exp(-m*sr))/sr -> m, avoiding division by zero
+        # When sr -> ∞: (1-exp(-m*sr))/sr -> 1/sr, recovering standard H-B model
+        exp_term = ti.exp(-m * sr)
+        yield_term = yield_stress * (1.0 - exp_term) / sr
+        
+        # Power-law term: K * γ̇^(n-1)
+        # Limit exponent to prevent gradient explosion when n < 1
+        exponent = ti.max(n - 1.0, -0.9)
+        power_term = k * (sr ** exponent)
+        
+        # Combine terms
+        mu_eff = yield_term + power_term
+        
+        # Hard truncation to prevent CFL condition from becoming too strict
+        # mu_max is typically 1000x the base viscosity
+        mu_max = mu_base * 1000.0
+        return ti.min(mu_eff, mu_max)
+
     @ti.kernel
     def p2g(self, f: ti.i32):
         for p in range(self.n_particles):
@@ -339,7 +424,39 @@ class MPMSimulator:
                 J = self.particles[f, p].S.determinant()
 
                 r = self.particles[f, p].U @ self.particles[f, p].V.transpose()
-                stress = 2 * self.particles_i[p].mu * (self.particles[f, p].F_tmp - r) @ self.particles[f, p].F_tmp.transpose() + ti.Matrix.identity(DTYPE_TI, self.dim) * self.particles_i[p].lam * J * (J - 1)
+                
+                # Compute effective viscosity using Herschel-Bulkley model if enabled
+                mu_eff = self.particles_i[p].mu  # Default: use base viscosity
+                if self.particles_i[p].use_herschel_bulkley != 0:
+                    # Compute shear rate from velocity gradient C
+                    shear_rate = self.compute_shear_rate(self.particles[f, p].C)
+                    
+                    # Use CONSISTENCY as base viscosity for mu_max calculation
+                    # This ensures CONSISTENCY is the primary viscosity parameter
+                    mu_base_for_max = self.particles_i[p].consistency
+                    # Fallback to MU if CONSISTENCY is zero (for backward compatibility)
+                    if mu_base_for_max < 1e-6:
+                        mu_base_for_max = self.particles_i[p].mu
+                    
+                    # Compute effective viscosity
+                    mu_eff = self.compute_effective_viscosity(
+                        shear_rate,
+                        self.particles_i[p].yield_stress,
+                        self.particles_i[p].consistency,
+                        self.particles_i[p].flow_index,
+                        mu_base_for_max,  # Use CONSISTENCY as base for mu_max
+                        100.0  # Papanastasiou regularization parameter m
+                    )
+                
+                # Compute stress: deviatoric (viscous) + volumetric (pressure)
+                # Deviatoric stress: uses dynamic effective viscosity
+                deviatoric_stress = 2 * mu_eff * (self.particles[f, p].F_tmp - r) @ self.particles[f, p].F_tmp.transpose()
+                
+                # Volumetric stress: unchanged, uses LAMDA
+                volumetric_stress = ti.Matrix.identity(DTYPE_TI, self.dim) * self.particles_i[p].lam * J * (J - 1)
+                
+                # Total stress
+                stress = deviatoric_stress + volumetric_stress
                 stress = (-self.dt * self.p_vol * 4 * self.inv_dx * self.inv_dx) * stress
                 affine = stress + self.particles_i[p].mass * self.particles[f, p].C
 

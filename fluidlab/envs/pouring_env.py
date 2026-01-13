@@ -49,14 +49,14 @@ class PouringEnv(FluidEnv):
         #     center=(0.6, 0.53, 0.5),
         #     height=0.2,
         #     radius=0.18,
-        #     material=MILK,
+        #     material=THICK_CREAM,  # 使用非牛顿粘稠材料
         # )
         self.taichi_env.add_body(
             type='cylinder',
             center=(0.6, 0.73, 0.5),
             height=0.2,
             radius=0.18,
-            material=WATER,
+            material=WATER,  # 使用非牛顿粘稠材料
         )
 
     def setup_boundary(self):
