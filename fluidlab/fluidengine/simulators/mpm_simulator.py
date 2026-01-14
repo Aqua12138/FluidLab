@@ -152,9 +152,15 @@ class MPMSimulator:
         yield_stress = np.array([YIELD_STRESS.get(mat_i, 0.0) for mat_i in mat]).astype(DTYPE_NP)
         consistency  = np.array([CONSISTENCY.get(mat_i, MU.get(mat_i, 0.0)) for mat_i in mat]).astype(DTYPE_NP)
         flow_index   = np.array([FLOW_INDEX.get(mat_i, 1.0) for mat_i in mat]).astype(DTYPE_NP)
-        # Enable H-B if any parameter is non-default (yield_stress > 0 or flow_index != 1.0)
-        use_hb = np.array([1 if (yield_stress[i] > 1e-6 or abs(flow_index[i] - 1.0) > 1e-6) else 0 
-                          for i in range(len(mat))]).astype(np.int32)
+        # Enable H-B if:
+        # 1. yield_stress > 0 (non-Newtonian with yield stress)
+        # 2. flow_index != 1.0 (non-Newtonian power-law)
+        # 3. CONSISTENCY is explicitly set in the dictionary (to ensure CONSISTENCY is used as primary parameter)
+        #    This handles the case where flow_index=1.0 but CONSISTENCY is set (e.g., HONEY with n=1)
+        use_hb = np.array([1 if (yield_stress[i] > 1e-6 or 
+                                 abs(flow_index[i] - 1.0) > 1e-6 or
+                                 mat[i] in CONSISTENCY)  # If CONSISTENCY is explicitly set, enable H-B
+                          else 0 for i in range(len(mat))]).astype(np.int32)
 
         self.init_particles_kernel(x, mat, mat_cls, used, mu, lam, p_rho, body_id, 
                                    yield_stress, consistency, flow_index, use_hb)
@@ -426,7 +432,13 @@ class MPMSimulator:
                 r = self.particles[f, p].U @ self.particles[f, p].V.transpose()
                 
                 # Compute effective viscosity using Herschel-Bulkley model if enabled
+                # Default: use CONSISTENCY if available, otherwise use MU
+                # This ensures CONSISTENCY is the primary viscosity parameter even when n=1
                 mu_eff = self.particles_i[p].mu  # Default: use base viscosity
+                if self.particles_i[p].consistency > 1e-6:
+                    # If CONSISTENCY is set, use it as the base viscosity (even for n=1 Newtonian case)
+                    mu_eff = self.particles_i[p].consistency
+                
                 if self.particles_i[p].use_herschel_bulkley != 0:
                     # Compute shear rate from velocity gradient C
                     shear_rate = self.compute_shear_rate(self.particles[f, p].C)

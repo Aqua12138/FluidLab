@@ -80,7 +80,7 @@ class TableMaterialsEnv(FluidEnv):
         # 8. SILLY_PUTTY: 橡皮泥，剪切增稠 (n=1.3, τ_y=0)
         # 9. YOGURT: 酸奶，剪切变稀+屈服应力 (n=0.6, τ_y=12)
         materials = [
-            WATER_NEWTON,  # 牛顿流体
+            # WATER_NEWTON,  # 牛顿流体
             # HONEY,          # 剪切变稀
             # KETCHUP,        # 剪切变稀+屈服应力
             # TOOTHPASTE,     # 剪切变稀+屈服应力
@@ -88,7 +88,7 @@ class TableMaterialsEnv(FluidEnv):
             # PAINT,          # 剪切变稀
             # CORNSTARCH,     # 剪切增稠
             # SILLY_PUTTY,    # 剪切增稠
-            # YOGURT,         # 剪切变稀+屈服应力
+            YOGURT,         # 剪切变稀+屈服应力
         ]
         
         # 直接在桌面上放置9种材料，使用固定的位置（参考mixing_env.py的方式）
@@ -116,7 +116,7 @@ class TableMaterialsEnv(FluidEnv):
                 type='cylinder',
                 center=(x, y, z),
                 height=0.1,
-                radius=0.05,
+                radius=0.1,
                 material=material,
             )
 
@@ -128,14 +128,42 @@ class TableMaterialsEnv(FluidEnv):
         )
 
     def setup_renderer(self):
-        self.taichi_env.setup_renderer(
-            camera_pos=(0.5, 0.8, 2.0),
-            camera_lookat=(0.5, 0.3, 0.5),
-            fov=30,
-            particle_radius=0.004,  # 减小粒子半径（默认0.0075），让粒子显示更小，与场景更成比例
-            lights=[{'pos': (0.5, 1.5, 0.5), 'color': (0.5, 0.5, 0.5)},
-                    {'pos': (0.5, 1.5, 1.5), 'color': (0.5, 0.5, 0.5)}],
-        )
+        # 支持 GGUI 和 GL 两种渲染器（参考 RheoAgent 的实现）
+        if self.renderer_type == 'GGUI':
+            self.taichi_env.setup_renderer(
+                type='GGUI',
+                camera_pos=(0.5, 0.8, 2.0),
+                camera_lookat=(0.5, 0.3, 0.5),
+                fov=30,
+                particle_radius=0.004,  # 减小粒子半径（默认0.0075），让粒子显示更小，与场景更成比例
+                lights=[{'pos': (0.5, 1.5, 0.5), 'color': (0.5, 0.5, 0.5)},
+                        {'pos': (0.5, 1.5, 1.5), 'color': (0.5, 0.5, 0.5)}],
+            )
+        elif self.renderer_type == 'GL':
+            # 参考 RheoAgent 的设置方式：不设置 particle_radius、_smoothing 等参数
+            # 使用 GLRenderer 的默认值（render_particle=False, particle_radius=0.01, _smoothing=0.5）
+            # 这样可以获得更好的流体渲染效果，减少颗粒感
+            self.taichi_env.setup_renderer(
+                type='GL',
+                # render_particle=False,  # 默认就是 False，使用流体渲染模式
+                camera_pos=(0.5, 0.8, 2.0),
+                camera_lookat=(0.5, 0.3, 0.5),
+                fov=30,
+                light_pos=(3.5, 15.0, 0.55),  # GL renderer 使用 light_pos 而不是 lights
+                light_lookat=(0.5, 0.5, 0.49),
+                light_fov=20,
+            )
+        else:
+            # 默认使用 GGUI
+            self.taichi_env.setup_renderer(
+                type='GGUI',
+                camera_pos=(0.5, 0.8, 2.0),
+                camera_lookat=(0.5, 0.3, 0.5),
+                fov=30,
+                particle_radius=0.004,
+                lights=[{'pos': (0.5, 1.5, 0.5), 'color': (0.5, 0.5, 0.5)},
+                        {'pos': (0.5, 1.5, 1.5), 'color': (0.5, 0.5, 0.5)}],
+            )
 
     def setup_loss(self):
         # 可以设置一个简单的损失函数，或者使用默认的

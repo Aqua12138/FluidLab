@@ -13,22 +13,22 @@ import fluidlab.utils.misc as misc_utils
 
 class GLRenderer:
     def __init__(self, 
-        res             = (640, 640),
+        res             = (960, 540),  # 与 RheoAgent 保持一致，提高默认分辨率
         camera_pos      = (0.5, 2.5, 3.5),
         camera_lookat   = (0.5, 0.5, 0.5),
         camera_near     = 0.1,
         camera_far      = 10.0,
         fov             = 30,
-        particle_radius = 0.01,
+        particle_radius = 0.01,  # 默认值，不要设置太小（如 0.001）会导致颗粒感
         smoke_radius    = 0.01,
-        render_particle = False,
+        render_particle = False,  # 默认使用流体渲染模式，减少颗粒感
         light_pos       = (0.5, 5.0, 0.5),
         light_lookat    = (0.5, 0.5, 0.49),
         light_fov       = 50,
         floor_height    = 0.0,
         scene_radius    = 10.0,
         cam_rotate_v    = 0.0,
-        _smoothing      = 0.5,
+        _smoothing      = 0.5,  # 默认平滑度
     ):
         self.res                = res
         self.camera_pos         = np.array(camera_pos)
