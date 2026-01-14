@@ -37,7 +37,7 @@ class MPMSimulator:
         # This is critical for n > 1 (shear-thickening) materials
         # Physical meaning: real materials have viscosity saturation at high shear rates
         # This prevents CFL condition from becoming too strict and causing simulation crash
-        self.max_viscosity = 1e3  # Global viscosity ceiling (100,000)
+        self.max_viscosity = 5e3  # Global viscosity ceiling (100,000)
 
         self.boundary      = None
         self.has_particles = False

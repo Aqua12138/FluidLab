@@ -15,8 +15,8 @@ class TableMaterialsEnv(FluidEnv):
         if seed is not None:
             self.seed(seed)
 
-        self.horizon               = 2000
-        self.horizon_action        = 2000
+        self.horizon               = 3000
+        self.horizon_action        = 3000
         self.target_file           = None
         self._n_obs_ptcls_per_body = 500
         self.loss                  = loss
@@ -80,10 +80,10 @@ class TableMaterialsEnv(FluidEnv):
         # 8. SILLY_PUTTY: 橡皮泥，剪切增稠 (n=1.3, τ_y=0)
         # 9. YOGURT: 酸奶，剪切变稀+屈服应力 (n=0.6, τ_y=12)
         materials = [
-            WATER_NEWTON,  # 牛顿流体
-            HONEY,          # 剪切变稀
+            # WATER_NEWTON,  # 牛顿流体
+            # HONEY,          # 剪切变稀
             # KETCHUP,        # 剪切变稀+屈服应力
-            # TOOTHPASTE,     # 剪切变稀+屈服应力
+            TOOTHPASTE,     # 剪切变稀+屈服应力
             # BLOOD,          # 剪切变稀
             # PAINT,          # 剪切变稀
             # CORNSTARCH,     # 剪切增稠
@@ -132,7 +132,7 @@ class TableMaterialsEnv(FluidEnv):
         if self.renderer_type == 'GGUI':
             self.taichi_env.setup_renderer(
                 type='GGUI',
-                camera_pos=(0.5, 0.8, 2.0),
+                camera_pos=(0.5, 0.8, 3.0),
                 camera_lookat=(0.5, 0.3, 0.5),
                 fov=30,
                 particle_radius=0.004,  # 减小粒子半径（默认0.0075），让粒子显示更小，与场景更成比例
@@ -146,10 +146,10 @@ class TableMaterialsEnv(FluidEnv):
             self.taichi_env.setup_renderer(
                 type='GL',
                 # render_particle=False,  # 默认就是 False，使用流体渲染模式
-                camera_pos=(0.5, 0.8, 2.0),
+                camera_pos=(0.5, 0.8, 3.0),
                 camera_lookat=(0.5, 0.3, 0.5),
                 fov=30,
-                light_pos=(3.5, 15.0, 0.55),  # GL renderer 使用 light_pos 而不是 lights
+                light_pos=(-3.5, 15.0, 0.55),  # GL renderer 使用 light_pos 而不是 lights
                 light_lookat=(0.5, 0.5, 0.49),
                 light_fov=20,
             )
