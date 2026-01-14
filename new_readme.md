@@ -135,11 +135,43 @@ FluidLab 使用 **Material Point Method (MPM)** 进行流体仿真，并实现�
 
 ---
 
+## 运行演示
+
+要运行材料演示，可以使用以下命令：
+
+```bash
+python fluidlab/run.py \
+  --cfg_file configs/exp_tablematerials.yaml \
+  --auto_rotate \
+  --auto_rotate_steps 350 \
+  --auto_rotate_speed 0.005 \
+  --auto_rotate_wait_steps 100 \
+  --auto_rotate_stop_steps 2000 \
+  --renderer_type GL
+```
+
+**参数说明**:
+- `--cfg_file configs/exp_tablematerials.yaml`: 使用材料演示环境配置
+- `--auto_rotate`: 启用自动旋转模式
+- `--auto_rotate_steps 350`: 旋转阶段执行 350 步
+- `--auto_rotate_speed 0.005`: 旋转速度（角速度）
+- `--auto_rotate_wait_steps 100`: 初始暂停 100 步，等待流体稳定
+- `--auto_rotate_stop_steps 2000`: 旋转后停止 2000 步，观察流体稳定
+- `--renderer_type GL`: 使用 GL 渲染器（更高质量的视觉效果）
+
+**运行流程**:
+1. **等待阶段** (100 步): 流体在静止状态下稳定
+2. **旋转阶段** (350 步): 玻璃杯以指定速度旋转，观察不同材料的流动行为
+3. **停止阶段** (2000 步): 停止旋转，观察流体的稳定过程和最终状态
+
+---
+
 ## 相关文件
 
 - 材料参数定义: `fluidlab/configs/macros.py`
 - MPM 求解器: `fluidlab/fluidengine/simulators/mpm_simulator.py`
 - 环境配置: `fluidlab/envs/tablematerials_env.py`
+- 实验配置: `fluidlab/configs/exp_tablematerials.yaml`
 
 ---
 
