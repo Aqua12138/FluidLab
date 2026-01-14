@@ -21,7 +21,7 @@ class TableMaterialsEnv(FluidEnv):
         self._n_obs_ptcls_per_body = 500
         self.loss                  = loss
         self.loss_type             = loss_type
-        self.action_range          = np.array([-0.01, 0.01])
+        self.action_range          = np.array([-0.01, 0.01])  # 位置和旋转的控制范围
         self.renderer_type         = renderer_type
 
         # create a taichi env
@@ -80,21 +80,21 @@ class TableMaterialsEnv(FluidEnv):
         # 8. SILLY_PUTTY: 橡皮泥，剪切增稠 (n=1.3, τ_y=0)
         # 9. YOGURT: 酸奶，剪切变稀+屈服应力 (n=0.6, τ_y=12)
         materials = [
-            # WATER_NEWTON,  # 牛顿流体
-            # HONEY,          # 剪切变稀
+            WATER_NEWTON,  # 牛顿流体
+            HONEY,          # 剪切变稀
             # KETCHUP,        # 剪切变稀+屈服应力
             # TOOTHPASTE,     # 剪切变稀+屈服应力
             # BLOOD,          # 剪切变稀
             # PAINT,          # 剪切变稀
             # CORNSTARCH,     # 剪切增稠
             # SILLY_PUTTY,    # 剪切增稠
-            YOGURT,         # 剪切变稀+屈服应力
+            # YOGURT,         # 剪切变稀+屈服应力
         ]
         
         # 直接在桌面上放置9种材料，使用固定的位置（参考mixing_env.py的方式）
         # 边界范围：(0.05, 0.05, 0.05) 到 (0.95, 0.95, 0.95)
         # 桌面高度 y = 0.15，材料放在 y = 0.25（桌面上方0.1）
-        table_y = 0.25
+        table_y = 0.7
         
         # 3x3网格布局，直接指定每个材料的位置
         positions = [
@@ -102,7 +102,7 @@ class TableMaterialsEnv(FluidEnv):
             # (0.25, table_y, 0.5),   # [0,1] 左中
             # (0.25, table_y, 0.75),  # [0,2] 左下
             # (0.5, table_y, 0.25),  # [1,0] 中上
-            (0.5, table_y, 0.5),    # [1,1] 中心
+            (0.6, table_y, 0.5),    # [1,1] 中心
             # (0.5, table_y, 0.75),   # [1,2] 中下
             # (0.75, table_y, 0.25),  # [2,0] 右上
             # (0.75, table_y, 0.5),   # [2,1] 右中
@@ -115,8 +115,8 @@ class TableMaterialsEnv(FluidEnv):
             self.taichi_env.add_body(
                 type='cylinder',
                 center=(x, y, z),
-                height=0.1,
-                radius=0.1,
+                height=0.4,
+                radius=0.07,
                 material=material,
             )
 

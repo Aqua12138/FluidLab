@@ -4,14 +4,14 @@ effectors:
     params:
       init_pos: (0.5, 0.5, 0.5)
       init_euler: (0.0, 0.0, 0.0)
-      action_dim: 3
-      action_scale_p: (1.0, 1.0, 1.0)
-      action_scale_v: (1.0, 1.0, 1.0)
+      action_dim: 6  # 改为6维，支持旋转控制（杯子可以倾斜倒出）
+      action_scale_p: (1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
+      action_scale_v: (1.0, 1.0, 1.0, 1.0, 1.0, 1.0)
     mesh:
-      file: stirrer.obj
-      scale: (0.1, 0.1, 0.1)
+      file: glass.obj  # 使用玻璃杯模型
+      scale: (0.3, 0.3, 0.3)  # 参考pouring环境的玻璃杯尺寸
       euler: (0.0, 0.0, 0.0)
-      material: STIRRER
+      material: BOTTLE  # 使用BOTTLE材料（glass使用BOTTLE材质）
       softness: 100.0
     boundary:
       type: cube

@@ -159,7 +159,7 @@ COLOR = {
     DISPENSER : (1.0, 1.0, 1.0, 1.0),
     CONE      : (0.645, 0.474, 0.303, 1.0),
     ROBOT     : (1.0, 1.0, 1.0, 1.0),
-    BOTTLE    : (0.70, 0.95, 0.96, 0.5),
+    BOTTLE    : (0.70, 0.95, 0.96, 0.3),  # 玻璃杯：透明效果（alpha=0.3，值越小越透明，0.0完全透明，1.0完全不透明）
     PILLAR    : (1.0, 1.0, 1.0, 1.0),
     STIRRER   : (1.0, 1.0, 1.0, 1.0),
     PLATE     : (1.0, 1.0, 1.0, 1.0),
@@ -178,13 +178,15 @@ FRICTION = {
     BOWL    : 0.0,
     LADDLE  : 0.1,
     CONE    : 8.0,
-    BOTTLE  : 0.1,
+    BOTTLE  : 0.4,
     PILLAR  : 0.0,
     STIRRER : 8.0,
     PLATE   : 0.1,
     TABLE   : 2.0,  # 桌子，高摩擦系数（防止材料滑动）
 }
 
+# MU: 向后兼容，仅当CONSISTENCY未定义时使用
+# 所有材料应优先使用CONSISTENCY，MU仅作为fallback
 MU = {
     WATER          : 0.0,
     INVISCID_DEMO  : 0.0,
@@ -195,21 +197,21 @@ MU = {
     COFFEE         : 0.0,
     MILK_VIS       : 200.0,
     COFFEE_VIS     : 200.0,
-    THICK_CREAM    : 350.0,  # 基础粘度（从CONSISTENCY派生，用于向后兼容和mu_max计算）
-    WATER_NEWTON   : 1.0,    # 牛顿流体，低粘度（从CONSISTENCY派生）
-    HONEY          : 5000.0, # 蜂蜜，高粘度（从CONSISTENCY派生）
-    KETCHUP        : 200.0,  # 番茄酱（从CONSISTENCY派生）
-    TOOTHPASTE     : 300.0,  # 牙膏（从CONSISTENCY派生）
-    BLOOD          : 50.0,   # 血液（从CONSISTENCY派生）
-    PAINT          : 150.0,  # 油漆（从CONSISTENCY派生）
-    CORNSTARCH     : 100.0,  # 玉米淀粉（从CONSISTENCY派生）
-    SILLY_PUTTY    : 2000.0, # 橡皮泥（从CONSISTENCY派生）
-    YOGURT         : 400.0,  # 酸奶（从CONSISTENCY派生）
+    THICK_CREAM    : 350.0,
+    WATER_NEWTON   : 1.0,
+    HONEY          : 5000.0,
+    KETCHUP        : 200.0,
+    TOOTHPASTE     : 300.0,
+    BLOOD          : 50.0,
+    PAINT          : 150.0,
+    CORNSTARCH     : 100.0,
+    SILLY_PUTTY    : 2000.0,
+    YOGURT         : 400.0,
     ELASTIC        : 416.67,
     ELASTIC_DEMO   : 10.0,
     PLASTIC_DEMO   : 160.0,
     ICECREAM       : 416.67,
-    ICECREAM1       : 216.67,
+    ICECREAM1      : 216.67,
     RIGID          : 416.67,
     RIGID_HEAVY    : 416.67,
     RIGID_LIGHT    : 416.67,
@@ -310,34 +312,39 @@ YIELD_STRESS = {
     RIGID_LIGHT    : 0.0,
 }
 
-# Consistency coefficient (K): 稠度系数，控制非牛顿流体的基础粘度
-# PRIMARY viscosity parameter for H-B model. When n=1 and τ_y=0, K equals effective viscosity.
-# MU is derived from CONSISTENCY for mu_max calculation when H-B is enabled.
+# Consistency coefficient (K): 稠度系数，控制材料的基础粘度
+# PRIMARY viscosity parameter for ALL materials (both liquid and non-liquid).
+# For Newtonian fluids (n=1, τ_y=0), K equals dynamic viscosity.
+# For non-Newtonian fluids, K is the consistency coefficient in Herschel-Bulkley model.
+# For non-liquid materials (elastic, rigid, etc.), K represents the viscosity-like parameter.
 CONSISTENCY = {
-    WATER          : 0.0,      # 使用MU值作为默认（牛顿流体）
-    INVISCID_DEMO  : 0.0,
-    INVISCID_DEMO2 : 0.0,
-    INVISCID_DEMO3 : 0.0,
-    VISCOUS_DEMO   : 800.0,   # 使用MU值
-    MILK           : 0.0,
-    COFFEE         : 0.0,
-    MILK_VIS       : 200.0,   # 使用MU值
-    COFFEE_VIS     : 200.0,   # 使用MU值
-    THICK_CREAM    : 350.0,   # 稠度系数：控制非牛顿流体的基础粘度（主要粘度参数）
-    WATER_NEWTON   : 1.0,    # 稠度系数：牛顿流体，低粘度（n=1时等于动态粘度）
-    HONEY          : 5000.0, # 稠度系数：蜂蜜，高粘度（主要粘度参数）
-    KETCHUP        : 200.0,  # 稠度系数：番茄酱（主要粘度参数）
-    TOOTHPASTE     : 300.0,  # 稠度系数：牙膏（主要粘度参数）
-    BLOOD          : 50.0,   # 稠度系数：血液（主要粘度参数）
-    PAINT          : 150.0,  # 稠度系数：油漆（主要粘度参数）
-    CORNSTARCH     : 100.0,  # 稠度系数：玉米淀粉（主要粘度参数）
-    SILLY_PUTTY    : 2000.0, # 稠度系数：橡皮泥（主要粘度参数）
-    YOGURT         : 400.0,  # 稠度系数：酸奶（主要粘度参数）
-    ELASTIC        : 416.67,  # 使用MU值
+    # MAT_LIQUID materials
+    WATER          : 0.0,      # 牛顿流体，无粘度（理想流体）
+    INVISCID_DEMO  : 0.0,      # 无粘度演示
+    INVISCID_DEMO2 : 0.0,      # 无粘度演示2
+    INVISCID_DEMO3 : 0.0,      # 无粘度演示3
+    VISCOUS_DEMO   : 800.0,    # 高粘度演示（牛顿流体）
+    MILK           : 0.0,      # 牛奶，低粘度（牛顿流体）
+    COFFEE         : 0.0,      # 咖啡，低粘度（牛顿流体）
+    MILK_VIS       : 200.0,    # 粘性牛奶（牛顿流体）
+    COFFEE_VIS     : 200.0,    # 粘性咖啡（牛顿流体）
+    THICK_CREAM    : 350.0,    # 稠奶油（非牛顿，剪切变稀）
+    WATER_NEWTON   : 1.0,      # 牛顿流体，低粘度
+    HONEY          : 5000.0,   # 蜂蜜（非牛顿，剪切变稀，高粘度）
+    KETCHUP        : 200.0,    # 番茄酱（非牛顿，剪切变稀+屈服应力）
+    TOOTHPASTE     : 300.0,    # 牙膏（非牛顿，剪切变稀+屈服应力）
+    BLOOD          : 50.0,     # 血液（非牛顿，剪切变稀）
+    PAINT          : 150.0,    # 油漆（非牛顿，剪切变稀）
+    CORNSTARCH     : 100.0,    # 玉米淀粉浆（非牛顿，剪切增稠）
+    SILLY_PUTTY    : 2000.0,   # 橡皮泥（非牛顿，剪切增稠）
+    YOGURT         : 400.0,    # 酸奶（非牛顿，剪切变稀+屈服应力）
+    
+    # 非液体材料（统一使用CONSISTENCY）
+    ELASTIC        : 416.67,
     ELASTIC_DEMO   : 10.0,
     PLASTIC_DEMO   : 160.0,
     ICECREAM       : 416.67,
-    ICECREAM1       : 216.67,
+    ICECREAM1      : 216.67,
     RIGID          : 416.67,
     RIGID_HEAVY    : 416.67,
     RIGID_LIGHT    : 416.67,
