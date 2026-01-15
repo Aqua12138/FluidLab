@@ -306,3 +306,7 @@ python fluidlab/run.py \
   --auto_rotate_stop_steps 2000 \
   --renderer_type GL
 ```
+
+```bash
+python fluidlab/run.py   --cfg_file configs/exp_tablematerials.yaml   --auto_rotate   --auto_rotate_steps 350   --auto_rotate_speed 0.005   --auto_rotate_wait_steps 100   --auto_rotate_stop_steps 2000   --renderer_type GL --num_envs 64 --no_grad
+```
