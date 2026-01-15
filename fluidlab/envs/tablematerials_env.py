@@ -156,12 +156,12 @@ class TableMaterialsEnv(FluidEnv):
             self.taichi_env.setup_renderer(
                 type='GL',
                 # render_particle=False,  # 默认就是 False，使用流体渲染模式
-                camera_pos=(0.5, 10, 3.0),
-                camera_lookat=(0.5, 0.3, 0.5),
-                fov=30,
-                light_pos=(-3.5, 15.0, 0.55),  # GL renderer 使用 light_pos 而不是 lights
-                light_lookat=(0.5, 0.5, 0.49),
-                light_fov=20,
+                # camera_pos=(0.5, 10, 3.0),
+                # camera_lookat=(0.5, 0.3, 0.5),
+                # fov=30,
+                # light_pos=(-3.5, 15.0, 0.55),  # GL renderer 使用 light_pos 而不是 lights
+                # light_lookat=(0.5, 0.5, 0.49),
+                # light_fov=100,
             )
         else:
             # 默认使用 GGUI

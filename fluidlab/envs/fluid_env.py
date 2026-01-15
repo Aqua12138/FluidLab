@@ -58,7 +58,7 @@ class FluidEnv(gym.Env):
         self.setup_bodies()
         self.setup_smoke_field()
         self.setup_boundary()
-        if not misc_utils.is_on_server():
+        if misc_utils.should_render():
             self.setup_renderer()
         if self.loss:
             self.setup_loss()

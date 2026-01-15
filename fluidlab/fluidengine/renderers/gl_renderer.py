@@ -12,25 +12,35 @@ import fluidlab.utils.geom as geom_utils
 import fluidlab.utils.misc as misc_utils
 
 class GLRenderer:
+    # Default parameter values for detecting if user provided custom values
+    _DEFAULT_CAMERA_POS = (0.5, 2.5, 3.5)
+    _DEFAULT_CAMERA_LOOKAT = (0.5, 0.5, 0.5)
+    _DEFAULT_LIGHT_POS = (0.5, 5.0, 0.5)
+    _DEFAULT_LIGHT_LOOKAT = (0.5, 0.5, 0.49)
+    _DEFAULT_FLOOR_HEIGHT = 0.0
+    _DEFAULT_SCENE_RADIUS = 10.0
+    _DEFAULT_CAMERA_FAR = 10.0
+    
     def __init__(self, 
         res             = (960, 540),  # 与 RheoAgent 保持一致，提高默认分辨率
-        camera_pos      = (0.5, 2.5, 3.5),
-        camera_lookat   = (0.5, 0.5, 0.5),
+        camera_pos      = None,  # None means auto-calculate for multi-env
+        camera_lookat   = None,
         camera_near     = 0.1,
-        camera_far      = 10.0,
+        camera_far      = None,
         fov             = 30,
         particle_radius = 0.01,  # 默认值，不要设置太小（如 0.001）会导致颗粒感
         smoke_radius    = 0.01,
         render_particle = False,  # 默认使用流体渲染模式，减少颗粒感
-        light_pos       = (0.5, 5.0, 0.5),
-        light_lookat    = (0.5, 0.5, 0.49),
+        light_pos       = None,
+        light_lookat    = None,
         light_fov       = 50,
-        floor_height    = 0.0,
-        scene_radius    = 10.0,
+        floor_height    = None,
+        scene_radius    = None,
         cam_rotate_v    = 0.0,
         _smoothing      = 0.5,  # 默认平滑度
         num_envs        = 1,
         env_spacing     = 1.2,
+        **kwargs,  # Accept extra kwargs for compatibility
     ):
         """
         Initialize GLRenderer with multi-environment support.
@@ -38,6 +48,11 @@ class GLRenderer:
         Args:
             num_envs: Number of parallel environments to render
             env_spacing: World-space distance between environment centers
+            camera_pos: Camera position. If None, auto-calculated for multi-env
+            camera_lookat: Camera look-at point. If None, auto-calculated for multi-env
+            light_pos: Light position. If None, auto-calculated for multi-env
+            floor_height: Floor height. If None, auto-calculated for multi-env
+            scene_radius: Scene radius. If None, auto-calculated for multi-env
         """
         self.num_envs = num_envs
         self.env_spacing = env_spacing
@@ -53,25 +68,57 @@ class GLRenderer:
         # Compute environment offsets
         self.env_offsets = self._compute_env_offsets()
         
-        self.res                = res
-        self.camera_pos         = np.array(camera_pos)
-        self.camera_lookat      = np.array(camera_lookat)
+        # Compute multi-env parameters first
+        self._compute_multi_env_params()
+        
+        self.res = res
+        
+        # Apply camera settings: use provided values or auto-calculated
+        if camera_pos is not None:
+            self.camera_pos = np.array(camera_pos)
+        # else: use self.camera_pos from _compute_multi_env_params
+        
+        if camera_lookat is not None:
+            self.camera_lookat = np.array(camera_lookat)
+        # else: use self.camera_lookat from _compute_multi_env_params
+        
         self.camera_vec         = self.camera_pos - self.camera_lookat
         self.camera_init_xz_rad = np.arctan2(self.camera_vec[0], self.camera_vec[2])
-        self.camera_angle       = geom_utils.compute_camera_angle(camera_pos, camera_lookat)
+        self.camera_angle       = geom_utils.compute_camera_angle(self.camera_pos, self.camera_lookat)
         self.camera_near        = camera_near
-        self.camera_far         = camera_far
+        
+        # Camera far: use provided or auto-calculated
+        if camera_far is not None:
+            self.camera_far = camera_far
+        # else: use self.camera_far from _compute_multi_env_params
+        
         self.lights             = []
         self.render_particle    = render_particle
         self.fov                = fov / 180.0 * np.pi
         self.particle_radius    = particle_radius
         self.smoke_radius       = smoke_radius
-        self.light_pos          = np.array(light_pos)
-        self.light_lookat       = np.array(light_lookat)
-        self.light_fov          = light_fov
-        self.floor_height       = floor_height
-        self.scene_radius       = scene_radius
-        self.cam_rotate_v       = cam_rotate_v
+        
+        # Light settings: use provided or auto-calculated
+        if light_pos is not None:
+            self.light_pos = np.array(light_pos)
+        # else: use self.light_pos from _compute_multi_env_params
+        
+        if light_lookat is not None:
+            self.light_lookat = np.array(light_lookat)
+        # else: use self.light_lookat from _compute_multi_env_params
+        
+        self.light_fov = light_fov
+        
+        # Floor and scene settings: use provided or auto-calculated
+        if floor_height is not None:
+            self.floor_height = floor_height
+        # else: use self.floor_height from _compute_multi_env_params
+        
+        if scene_radius is not None:
+            self.scene_radius = scene_radius
+        # else: use self.scene_radius from _compute_multi_env_params
+        
+        self.cam_rotate_v = cam_rotate_v
 
         self._msaaSamples = 8
         self._anisotropy_scale = 1.0
@@ -83,6 +130,56 @@ class GLRenderer:
         self.aa = []
 
         flex_renderer.init(self.res[0], self.res[1], self._msaaSamples, self.fov)
+    
+    def _compute_multi_env_params(self):
+        """Compute optimal camera, lights, floor, etc. for multi-environment rendering."""
+        # Single environment center offset (default env center is at 0.5, 0.5, 0.5)
+        env_center_offset = 0.5
+        
+        # Calculate grid center
+        center_x = (self.grid_cols - 1) * self.env_spacing / 2 + env_center_offset
+        center_z = (self.grid_rows - 1) * self.env_spacing / 2 + env_center_offset
+        center_y = env_center_offset
+        
+        self._grid_center = np.array([center_x, center_y, center_z])
+        
+        # Calculate grid extent
+        grid_width = (self.grid_cols - 1) * self.env_spacing
+        grid_depth = (self.grid_rows - 1) * self.env_spacing
+        grid_extent = np.sqrt(grid_width**2 + grid_depth**2)
+        
+        if self.num_envs > 1:
+            # Multi-env: calculate optimal parameters
+            # Camera height scales with grid size for good overview
+            camera_height = 3.0 + grid_extent * 1.0
+            camera_distance = 2.0 + grid_extent * 0.8
+            
+            self.camera_pos = np.array([center_x, camera_height, center_z + camera_distance])
+            self.camera_lookat = np.array([center_x, center_y, center_z])
+            
+            # Light position: much higher above grid center for even illumination
+            # Light should be high enough to cover entire grid without falloff
+            light_height = camera_height*1.2
+            self.light_pos = np.array([center_x, light_height, center_z])
+            self.light_lookat = np.array([center_x+0.01, 0.0, center_z])
+            
+            # Floor height: below all environments
+            self.floor_height = -0.1
+            
+            # Scene radius: cover entire grid with large margin for light coverage
+            self.scene_radius = max(grid_extent * 3, 20.0)
+            
+            # Camera far: ensure all envs are visible
+            self.camera_far = (camera_height + camera_distance) * 2
+        else:
+            # Single env: use default values
+            self.camera_pos = np.array(self._DEFAULT_CAMERA_POS)
+            self.camera_lookat = np.array(self._DEFAULT_CAMERA_LOOKAT)
+            self.light_pos = np.array(self._DEFAULT_LIGHT_POS)
+            self.light_lookat = np.array(self._DEFAULT_LIGHT_LOOKAT)
+            self.floor_height = self._DEFAULT_FLOOR_HEIGHT
+            self.scene_radius = self._DEFAULT_SCENE_RADIUS
+            self.camera_far = self._DEFAULT_CAMERA_FAR
     
     def _compute_env_offsets(self):
         """Compute world-space offsets for each environment in grid layout."""
@@ -109,26 +206,17 @@ class GLRenderer:
         self.follow_env_id = follow_env_id
     
     def setup_overview_camera(self):
-        """Position camera to see all environments in grid layout."""
-        # Calculate center of the grid
-        center_x = (self.grid_cols - 1) * self.env_spacing / 2
-        center_z = (self.grid_rows - 1) * self.env_spacing / 2
+        """Position camera to see all environments in grid layout.
         
-        # Calculate camera height based on grid size
-        grid_extent = max(self.grid_rows, self.grid_cols) * self.env_spacing
-        camera_height = grid_extent * 1.5
-        camera_distance = grid_extent * 1.2
-        
-        # Position camera for overview
-        new_camera_pos = np.array([center_x, camera_height, center_z + camera_distance])
-        new_camera_lookat = np.array([center_x, 0.3, center_z])
-        new_camera_angle = geom_utils.compute_camera_angle(new_camera_pos, new_camera_lookat)
+        Uses pre-computed camera_pos and camera_lookat from _compute_multi_env_params.
+        """
+        camera_angle = geom_utils.compute_camera_angle(self.camera_pos, self.camera_lookat)
         
         flex_renderer.set_camera_params(
-            self.scaled(new_camera_pos),
-            new_camera_angle,
+            self.scaled(self.camera_pos),
+            camera_angle,
             self.scaled(self.camera_near),
-            self.scaled(self.camera_far * 2),  # Extend far plane for overview
+            self.scaled(self.camera_far),
         )
 
 
@@ -161,23 +249,8 @@ class GLRenderer:
         n_bodies = n_bodies_per_env * self.num_envs
         assert np.sum(bodies_n_particles) == self.n_particles
 
-        # Adjust light position for multi-env overview
-        light_pos = self.light_pos.copy()
-        light_lookat = self.light_lookat.copy()
-        if self.num_envs > 1:
-            center_x = (self.grid_cols - 1) * self.env_spacing / 2
-            center_z = (self.grid_rows - 1) * self.env_spacing / 2
-            light_pos[0] += center_x
-            light_pos[2] += center_z
-            light_lookat[0] += center_x
-            light_lookat[2] += center_z
-
-        # Adjust scene radius for multi-env
-        scene_radius = self.scene_radius
-        if self.num_envs > 1:
-            scene_radius = max(self.grid_rows, self.grid_cols) * self.env_spacing * 2
-
-        # create scene
+        # create scene (light_pos, light_lookat, floor_height, scene_radius already
+        # computed in _compute_multi_env_params for multi-env mode)
         flex_renderer.create_scene(
             self.render_particle,
             self.particle_radius,
@@ -186,11 +259,11 @@ class GLRenderer:
             self._smoothing,
             self._gl_color_gamma,
             self.scaled(self._fluid_rest_distance),
-            self.scaled(light_pos),
-            self.scaled(light_lookat),
+            self.scaled(self.light_pos),
+            self.scaled(self.light_lookat),
             self.light_fov,
             self.scaled(self.floor_height),
-            self.scaled(scene_radius),
+            self.scaled(self.scene_radius),
             bodies_n_particles,
             bodies_particle_offset,
             bodies_color,

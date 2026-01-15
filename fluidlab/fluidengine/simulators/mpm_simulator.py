@@ -6,6 +6,7 @@ import os
 import torch
 from time import time
 from fluidlab.utils.misc import *
+from fluidlab.utils.misc import is_headless
 from fluidlab.configs.macros import *
 from fluidlab.fluidengine.boundaries import create_boundary
 
@@ -145,9 +146,13 @@ class MPMSimulator:
             needs_grad=False, layout=ti.Layout.SOA)
         
         # Render buffer: (num_envs * n_particles) for multi-env rendering
-        self.particles_render = particle_state_render.field(
-            shape=(self.num_envs * self.n_particles,), 
-            needs_grad=False, layout=ti.Layout.SOA)
+        # Skip allocation in headless mode to save memory
+        if not is_headless():
+            self.particles_render = particle_state_render.field(
+                shape=(self.num_envs * self.n_particles,), 
+                needs_grad=False, layout=ti.Layout.SOA)
+        else:
+            self.particles_render = None
         
         # Material info shared across all envs (no num_envs dimension for memory efficiency)
         self.particles_i = particle_info.field(
@@ -1110,6 +1115,8 @@ class MPMSimulator:
             self.particles_render[global_idx].used = ti.cast(self.particles_ng[env_id, pf, i].used, ti.i32)
 
     def get_state_render(self, f):
+        if self.particles_render is None:
+            return None  # Headless mode - no render buffer
         self.get_state_render_kernel(f)
         return self.particles_render
 

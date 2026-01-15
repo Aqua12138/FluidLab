@@ -9,17 +9,23 @@ from fluidlab.configs.macros import *
 
 @ti.data_oriented
 class GGUIRenderer:
+    # Default parameter values for detecting if user provided custom values
+    _DEFAULT_CAMERA_POS = (0.5, 2.5, 3.5)
+    _DEFAULT_CAMERA_LOOKAT = (0.5, 0.5, 0.5)
+    _DEFAULT_LIGHTS = [{'pos': (0.5, 1.5, 0.5), 'color': (0.5, 0.5, 0.5)},
+                       {'pos': (0.5, 1.5, 1.5), 'color': (0.5, 0.5, 0.5)}]
+    
     def __init__(self, 
         res=(640, 640),
-        camera_pos=(0.5, 2.5, 3.5),
-        camera_lookat=(0.5, 0.5, 0.5),
+        camera_pos=None,  # None means auto-calculate for multi-env
+        camera_lookat=None,
         fov=30,
         mode='human',
         particle_radius=0.0075,
-        lights=[{'pos': (0.5, 1.5, 0.5), 'color': (0.5, 0.5, 0.5)},
-                {'pos': (0.5, 1.5, 1.5), 'color': (0.5, 0.5, 0.5)}],
+        lights=None,
         num_envs=1,
         env_spacing=1.2,
+        **kwargs,  # Accept extra kwargs for compatibility
     ):
         """
         Initialize GGUIRenderer with multi-environment support.
@@ -27,6 +33,9 @@ class GGUIRenderer:
         Args:
             num_envs: Number of parallel environments to render
             env_spacing: World-space distance between environment centers
+            camera_pos: Camera position. If None, auto-calculated for multi-env
+            camera_lookat: Camera look-at point. If None, auto-calculated for multi-env
+            lights: Light sources. If None, auto-calculated for multi-env
         """
         self.num_envs = num_envs
         self.env_spacing = env_spacing
@@ -40,15 +49,32 @@ class GGUIRenderer:
         self.follow_env_id = 0
         
         self.res = res
-        self.camera_pos = np.array(camera_pos)
-        self.camera_lookat = np.array(camera_lookat)
+        
+        # Compute multi-env parameters
+        self._compute_multi_env_params()
+        
+        # Apply camera settings: use provided values or auto-calculated
+        if camera_pos is not None:
+            self.camera_pos = np.array(camera_pos)
+        # else: use self.camera_pos from _compute_multi_env_params
+        
+        if camera_lookat is not None:
+            self.camera_lookat = np.array(camera_lookat)
+        # else: use self.camera_lookat from _compute_multi_env_params
+        
         self.camera_vec = self.camera_pos - self.camera_lookat
         self.camera_init_xz_rad = np.arctan2(self.camera_vec[0], self.camera_vec[2])
         self.lights = []
         self.uninit = True
 
-        for light in lights:
-            self.add_light(light['pos'], light['color'])
+        # Apply light settings: use provided values or auto-calculated
+        if lights is not None:
+            for light in lights:
+                self.add_light(light['pos'], light['color'])
+        else:
+            # Use auto-calculated lights for multi-env
+            for light in self._auto_lights:
+                self.add_light(light['pos'], light['color'])
 
         self.fov = fov
         self.particle_radius = particle_radius
@@ -70,6 +96,44 @@ class GGUIRenderer:
         # Environment offset positions for Isaac Lab-style layout
         self.env_offsets_np = self._compute_env_offsets()
         self.env_offsets = ti.Vector.field(3, ti.f32, shape=(num_envs,))
+    
+    def _compute_multi_env_params(self):
+        """Compute optimal camera, lights, etc. for multi-environment rendering."""
+        # Single environment center offset (default env center is at 0.5, 0.5, 0.5)
+        env_center_offset = 0.5
+        
+        # Calculate grid center
+        center_x = (self.grid_cols - 1) * self.env_spacing / 2 + env_center_offset
+        center_z = (self.grid_rows - 1) * self.env_spacing / 2 + env_center_offset
+        center_y = env_center_offset
+        
+        self._grid_center = np.array([center_x, center_y, center_z])
+        
+        # Calculate grid extent
+        grid_width = (self.grid_cols - 1) * self.env_spacing
+        grid_depth = (self.grid_rows - 1) * self.env_spacing
+        grid_extent = np.sqrt(grid_width**2 + grid_depth**2)
+        
+        if self.num_envs > 1:
+            # Multi-env: calculate optimal camera position
+            # Camera height scales with grid size for good overview
+            camera_height = 3.0 + grid_extent * 1.0
+            camera_distance = 2.0 + grid_extent * 0.8
+            
+            self.camera_pos = np.array([center_x, camera_height, center_z + camera_distance])
+            self.camera_lookat = np.array([center_x, center_y, center_z])
+            
+            # Auto lights for multi-env: position high above grid center for even illumination
+            light_height = grid_extent * 2.0 + 8.0
+            self._auto_lights = [
+                {'pos': (center_x, light_height, center_z), 'color': (0.6, 0.6, 0.6)},
+                {'pos': (center_x, light_height * 0.8, center_z + camera_distance * 0.3), 'color': (0.4, 0.4, 0.4)}
+            ]
+        else:
+            # Single env: use default values
+            self.camera_pos = np.array(self._DEFAULT_CAMERA_POS)
+            self.camera_lookat = np.array(self._DEFAULT_CAMERA_LOOKAT)
+            self._auto_lights = self._DEFAULT_LIGHTS
         
     def _compute_env_offsets(self):
         """Compute world-space offsets for each environment in grid layout."""
@@ -146,19 +210,12 @@ class GGUIRenderer:
         self.follow_env_id = follow_env_id
     
     def setup_overview_camera(self):
-        """Position camera to see all environments in grid layout."""
-        # Calculate center of the grid
-        center_x = (self.grid_cols - 1) * self.env_spacing / 2
-        center_z = (self.grid_rows - 1) * self.env_spacing / 2
+        """Position camera to see all environments in grid layout.
         
-        # Calculate camera height based on grid size
-        grid_extent = max(self.grid_rows, self.grid_cols) * self.env_spacing
-        camera_height = grid_extent * 1.5
-        camera_distance = grid_extent * 1.2
-        
-        # Position camera for overview
-        self.camera.position(center_x, camera_height, center_z + camera_distance)
-        self.camera.lookat(center_x, 0.3, center_z)
+        Uses pre-computed camera_pos and camera_lookat from _compute_multi_env_params.
+        """
+        self.camera.position(self.camera_pos[0], self.camera_pos[1], self.camera_pos[2])
+        self.camera.lookat(self.camera_lookat[0], self.camera_lookat[1], self.camera_lookat[2])
 
     def update_fps(self):
         self.fps = 1.0 / (time() - self.t)

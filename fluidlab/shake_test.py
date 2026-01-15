@@ -22,7 +22,7 @@ from datetime import datetime
 import fluidlab.envs
 from fluidlab.utils.config import load_config
 from fluidlab.run import make_env_with_renderer
-from fluidlab.utils.misc import is_on_server
+from fluidlab.utils.misc import should_render
 
 class ShakePolicy:
     """Simple policy for shake test"""
@@ -193,7 +193,7 @@ def shake_test(env, cfg=None,
             
             current_step += 1
             
-            if not is_on_server() and step % 10 == 0:
+            if should_render() and step % 10 == 0:
                 taichi_env.render('human')
         
         # Phase 2: Move right
@@ -226,7 +226,7 @@ def shake_test(env, cfg=None,
             
             current_step += 1
             
-            if not is_on_server() and step % 5 == 0:
+            if should_render() and step % 5 == 0:
                 taichi_env.render('human')
         
         # Phase 3: Stop and observe
@@ -251,7 +251,7 @@ def shake_test(env, cfg=None,
             
             current_step += 1
             
-            if not is_on_server() and step % 10 == 0:
+            if should_render() and step % 10 == 0:
                 taichi_env.render('human')
         
         print("\nShake test completed!")
@@ -361,7 +361,7 @@ def shake_test(env, cfg=None,
         
         # Try to show plot, but handle errors gracefully
         try:
-            if not is_on_server() and os.getenv('DISPLAY') is not None:
+            if should_render() and os.getenv('DISPLAY') is not None:
                 # Only try to show if we have a display
             plt.show()
         else:

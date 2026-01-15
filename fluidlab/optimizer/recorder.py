@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import taichi as ti
 import pickle as pkl
-from fluidlab.utils.misc import is_on_server
+from fluidlab.utils.misc import should_render
 
 class Recorder:
     def __init__(self, env):
@@ -52,7 +52,7 @@ class Recorder:
                 img = taichi_env.render('rgb_array')
                 cv2.imwrite(f'tmp/recorder/{i:04d}.png', img[:, :, ::-1])
             else:
-                if not is_on_server():
+                if should_render():
                     taichi_env.render('human')
 
         if self.target_file is not None:
@@ -70,7 +70,7 @@ class Recorder:
             taichi_env.simulator.set_x(0, target['x'][i])
             taichi_env.simulator.set_used(0, target['used'][i])
 
-            if not is_on_server():
+            if should_render():
                 taichi_env.render('human')
 
     def replay_policy(self, policy_path):
@@ -96,7 +96,7 @@ class Recorder:
                 img = taichi_env.render('rgb_array')
                 cv2.imwrite(f'tmp/replay/{i:04d}.png', img[:, :, ::-1])
             else:
-                if not is_on_server():
+                if should_render():
                     taichi_env.render('human')
 
 

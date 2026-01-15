@@ -14,7 +14,7 @@ from fluidlab.optimizer.solver import solve_policy
 from fluidlab.optimizer.recorder import record_target, replay_policy, replay_target
 from fluidlab.utils.config import load_config
 from fluidlab.optimizer.policies import KeyboardPolicy_vxy_wz, KeyboardPolicy_vxy, KeyboardPolicy_wz
-from fluidlab.utils.misc import is_on_server
+from fluidlab.utils.misc import set_headless_mode, should_render
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -40,6 +40,8 @@ def get_args():
                        help='Number of parallel environments (GPU batch parallelism)')
     parser.add_argument("--no_grad", action='store_true', 
                        help='Disable gradient computation (inference mode, saves memory)')
+    parser.add_argument("--headless", action='store_true',
+                       help='Run in headless mode (no rendering, max performance)')
 
     args = parser.parse_args()
 
@@ -169,7 +171,7 @@ def auto_rotate_control(env, cfg=None, n_steps=1000, rotation_speed=0.03, wait_s
                 sim_fps_counter += 1
                 
                 # Render
-                if not is_on_server():
+                if should_render():
                     taichi_env.render('human')
                 
                 # Print simulation FPS
@@ -198,7 +200,7 @@ def auto_rotate_control(env, cfg=None, n_steps=1000, rotation_speed=0.03, wait_s
             sim_fps_counter += 1
             
             # Render
-            if not is_on_server():
+            if should_render():
                 taichi_env.render('human')
             
             # Print simulation FPS
@@ -227,7 +229,7 @@ def auto_rotate_control(env, cfg=None, n_steps=1000, rotation_speed=0.03, wait_s
                 sim_fps_counter += 1
                 
                 # Render
-                if not is_on_server():
+                if should_render():
                     taichi_env.render('human')
                 
                 # Print simulation FPS
@@ -368,7 +370,7 @@ def keyboard_control(env, cfg=None):
             sim_fps_counter += 1
             
             # Render
-            if not is_on_server():
+            if should_render():
                 taichi_env.render('human')
             
             # Print simulation FPS
@@ -396,6 +398,10 @@ def keyboard_control(env, cfg=None):
 
 def main():
     args = get_args()
+    
+    # Set headless mode before any environment creation
+    set_headless_mode(args.headless)
+    
     if args.cfg_file is not None:
         cfg = load_config(args.cfg_file)
     else:

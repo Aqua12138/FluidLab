@@ -29,6 +29,28 @@ def is_on_server():
     else:
         return False
 
+# Headless mode state management
+_HEADLESS_MODE = None  # None = not set, True/False = explicit
+
+def set_headless_mode(headless: bool):
+    """Set headless mode explicitly."""
+    global _HEADLESS_MODE
+    _HEADLESS_MODE = headless
+
+def is_headless():
+    """Returns True if running in headless mode.
+    
+    Priority: explicit --headless flag > auto-detection (is_on_server)
+    """
+    if _HEADLESS_MODE is not None:
+        return _HEADLESS_MODE
+    # Fallback: auto-detect server environment
+    return is_on_server()
+
+def should_render():
+    """Returns True if rendering should be performed."""
+    return not is_headless()
+
 def alpha_to_transparency(color):
     return np.array([color[0], color[1], color[2], 1.0 - color[3]])
 

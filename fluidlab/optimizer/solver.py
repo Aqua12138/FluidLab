@@ -2,7 +2,7 @@ import os
 import cv2
 import numpy as np
 import taichi as ti
-from fluidlab.utils.misc import is_on_server
+from fluidlab.utils.misc import is_headless
 
 from fluidlab.fluidengine.taichi_env import TaichiEnv
 
@@ -73,7 +73,7 @@ class Solver:
 
 
     def render_policy(self, taichi_env, init_state, policy, horizon, horizon_action, iteration):
-        if is_on_server():
+        if is_headless():
             return
 
         taichi_env.set_state(**init_state)
