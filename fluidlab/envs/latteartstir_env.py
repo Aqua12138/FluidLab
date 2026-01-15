@@ -10,8 +10,11 @@ from fluidlab.fluidengine.taichi_env import TaichiEnv
 from fluidlab.fluidengine.losses import *
 
 class LatteArtStirEnv(FluidEnv):
-    def __init__(self, version, loss=True, loss_type='diff', seed=None, renderer_type='GGUI'):
-
+    def __init__(self, version, loss=True, loss_type='diff', seed=None, renderer_type='GGUI',
+                 num_envs=1, enable_grad=True):
+        self.num_envs = num_envs
+        self.enable_grad = enable_grad
+        
         if seed is not None:
             self.seed(seed)
 
@@ -24,6 +27,10 @@ class LatteArtStirEnv(FluidEnv):
         self.action_range          = np.array([-0.01, 0.01])
         self.renderer_type         = renderer_type
 
+        # Initialize Taichi with appropriate memory settings
+        from fluidlab.fluidengine.taichi_env import init_taichi
+        init_taichi(num_envs=num_envs, enable_grad=enable_grad)
+
         # create a taichi env
         self.taichi_env = TaichiEnv(
             dim=3,
@@ -31,6 +38,8 @@ class LatteArtStirEnv(FluidEnv):
             max_substeps_local=50,
             gravity=(0.0, -20.0, 0.0),
             horizon=self.horizon,
+            num_envs=num_envs,
+            enable_grad=enable_grad,
         )
         self.build_env()
         self.gym_misc()

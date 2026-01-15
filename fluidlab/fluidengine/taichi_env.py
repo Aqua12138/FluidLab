@@ -9,14 +9,44 @@ from fluidlab.fluidengine.bodies import Bodies
 from fluidlab.configs.macros import *
 from fluidlab.utils.misc import *
 
-ti.init(arch=ti.gpu, device_memory_GB=8, packed=True)
-# ti.init(arch=ti.gpu, device_memory_GB=10, packed=True)
-# ti.init(arch=ti.gpu, device_memory_GB=10, packed=True, debug=True)
+# Global flag to track if Taichi has been initialized
+_TAICHI_INITIALIZED = False
+
+def init_taichi(num_envs=1, enable_grad=True, device_memory_GB=None):
+    """
+    Initialize Taichi with appropriate memory settings.
+    IMPORTANT: ti.init can only be called once, so this must be done before creating any fields.
+    
+    Args:
+        num_envs: Number of parallel environments (affects memory allocation)
+        enable_grad: Whether gradient computation is enabled (affects memory needs)
+        device_memory_GB: Override default memory allocation (auto-calculated if None)
+    """
+    global _TAICHI_INITIALIZED
+    if _TAICHI_INITIALIZED:
+        return  # Already initialized
+    
+    if device_memory_GB is None:
+        # Dynamic memory allocation based on num_envs and mode
+        if enable_grad:
+            # Differentiable mode needs more memory for gradients
+            device_memory_GB = 20
+        else:
+            # Inference mode is much lighter
+            device_memory_GB = min(8, 2 + num_envs * 0.2)
+    
+    ti.init(arch=ti.gpu, device_memory_GB=device_memory_GB, packed=True)
+    _TAICHI_INITIALIZED = True
+    print(f'===>  Taichi initialized: num_envs={num_envs}, enable_grad={enable_grad}, device_memory_GB={device_memory_GB}')
+
+# Default initialization for backward compatibility (will be skipped if already initialized)
+init_taichi(num_envs=1, enable_grad=True)
 
 @ti.data_oriented
 class TaichiEnv:
     '''
     TaichiEnv wraps all components in a simulation environment.
+    Supports GPU batch parallelism with num_envs parameter.
     '''    
     def __init__(
             self,
@@ -28,7 +58,20 @@ class TaichiEnv:
             horizon=100,
             ckpt_dest='disk',
             gravity=(0.0, -10.0, 0.0),
+            num_envs=1,
+            enable_grad=True,
         ):
+        """
+        Initialize TaichiEnv.
+        
+        Args:
+            num_envs: Number of parallel environments (default 1 for backward compatibility)
+            enable_grad: Whether to enable gradient computation (affects memory layout)
+                - True: Use full time frames for checkpointing (max_substeps_local+1)
+                - False: Use minimal buffers for inference (2 frames particles, 1 frame grid)
+        """
+        self.num_envs            = num_envs
+        self.enable_grad         = enable_grad
         self.particle_density    = particle_density
         self.dim                 = dim
         self.max_substeps_local  = max_substeps_local
@@ -36,6 +79,10 @@ class TaichiEnv:
         self.horizon             = horizon
         self.ckpt_dest           = ckpt_dest
         self.t                   = 0
+
+        # Per-env random seeds for sample diversity
+        self.base_seed = 0
+        self.env_seeds = [self.base_seed + env_id for env_id in range(num_envs)]
 
         # env components
         self.simulator = MPMSimulator(
@@ -46,6 +93,8 @@ class TaichiEnv:
             max_substeps_global = self.max_substeps_global,
             gravity             = gravity,
             ckpt_dest           = ckpt_dest,
+            num_envs            = num_envs,
+            enable_grad         = enable_grad,
         )
         self.agent           = None
         self.statics         = Statics()
@@ -53,8 +102,12 @@ class TaichiEnv:
         self.renderer        = None
         self.loss            = None
         self.smoke_field     = None
+        
+        # Store initial state for reset
+        self.init_x = None
+        self.init_used = None
 
-        print('===>  TaichiEnv created.')
+        print(f'===>  TaichiEnv created: num_envs={num_envs}, enable_grad={enable_grad}')
 
     def setup_agent(self, agent_cfg):
         self.agent = eval(agent_cfg.type)(
@@ -83,7 +136,8 @@ class TaichiEnv:
         else:
             raise NotImplementedError(f"Renderer type '{type}' is not supported. Supported types: 'GGUI', 'GL'.")
 
-        self.renderer = Renderer(**kwargs)
+        # Pass num_envs to renderer for multi-env visualization
+        self.renderer = Renderer(num_envs=self.num_envs, **kwargs)
 
     def setup_boundary(self, **kwargs):
         self.simulator.setup_boundary(**kwargs)
@@ -114,9 +168,14 @@ class TaichiEnv:
         if self.particles is not None:
             self.n_particles = len(self.particles['x'])
             self.has_particles = True
+            # Store initial state for reset
+            self.init_x = self.particles['x'].copy().astype(DTYPE_NP)
+            self.init_used = self.particles['used'].copy().astype(np.int32)
         else:
             self.n_particles = 0
             self.has_particles = False
+            self.init_x = None
+            self.init_used = None
 
         # build and initialize states of all environment components
         self.simulator.build(self.agent, self.smoke_field, self.statics, self.particles)
@@ -223,3 +282,45 @@ class TaichiEnv:
     def apply_agent_action_p_grad(self, action_p):
         assert self.agent is not None, 'Environment has no agent to execute action.'
         self.agent.apply_action_p_grad(action_p)
+
+    # --------------------------------- Multi-Env Support -----------------------------------
+    def get_state_RL_all_envs(self):
+        """Get RL state for all environments. Returns dict with arrays of shape (num_envs, ...)"""
+        return self.simulator.get_state_RL_all_envs()
+
+    def get_x_all_envs(self, f=None):
+        """Get particle positions for all environments."""
+        return self.simulator.get_x_all_envs(f)
+
+    def reset_envs(self, env_ids=None):
+        """
+        Reset specific environments to initial state.
+        
+        Args:
+            env_ids: array of environment indices to reset, or None to reset all
+        """
+        if env_ids is None:
+            env_ids = np.arange(self.num_envs)
+        
+        if self.has_particles:
+            self.simulator.reset_envs(env_ids, self.init_x, self.init_used)
+        
+        # Reset agent state for specific envs if needed
+        # TODO: Add agent reset support
+        
+    def reset_all(self):
+        """Reset all environments to initial state."""
+        self.reset_envs(None)
+        self.t = 0
+        
+        if self.loss:
+            self.loss.reset()
+
+    def set_seed(self, seed):
+        """Set base random seed for all environments."""
+        self.base_seed = seed
+        self.env_seeds = [self.base_seed + env_id for env_id in range(self.num_envs)]
+    
+    def get_env_seed(self, env_id):
+        """Get random seed for a specific environment."""
+        return self.env_seeds[env_id]

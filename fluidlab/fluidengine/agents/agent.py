@@ -7,7 +7,20 @@ from fluidlab.utils.misc import *
 
 @ti.data_oriented
 class Agent:
-    # Agent with (possibly) multiple effectors.
+    """
+    Agent with (possibly) multiple effectors.
+    
+    NOTE on GPU Batch Parallelism:
+    - Currently, the Agent class does NOT have a num_envs dimension.
+    - All parallel environments share the same agent configuration.
+    - Actions are broadcast to all environments (all envs execute the same action).
+    - This is consistent with the original design where agent state is shared.
+    
+    Future Work for Per-Env Agent:
+    - Add num_envs dimension to effector state fields (pos, quat, v, w)
+    - Modify action buffers to shape (num_envs, action_dim)
+    - Update collision functions with env_id parameter
+    """
     def __init__(
         self,
         max_substeps_local,

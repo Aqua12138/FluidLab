@@ -13,8 +13,11 @@ class CirculationEnv(FluidEnv):
     '''
     Indoor air circulation.
     '''
-    def __init__(self, version, loss=True, loss_type='diff', seed=None):
-
+    def __init__(self, version, loss=True, loss_type='diff', seed=None,
+                 num_envs=1, enable_grad=True):
+        self.num_envs = num_envs
+        self.enable_grad = enable_grad
+        
         if seed is not None:
             self.seed(seed)
 
@@ -26,6 +29,10 @@ class CirculationEnv(FluidEnv):
         self.loss_type             = loss_type
         self.action_range          = np.array([-0.1, 0.1])
 
+        # Initialize Taichi with appropriate memory settings
+        from fluidlab.fluidengine.taichi_env import init_taichi
+        init_taichi(num_envs=num_envs, enable_grad=enable_grad)
+
         # create a taichi env
         self.taichi_env = TaichiEnv(
             dim=3,
@@ -34,6 +41,8 @@ class CirculationEnv(FluidEnv):
             gravity=(0.0, -20.0, 0.0),
             horizon=self.horizon,
             ckpt_dest='cpu',
+            num_envs=num_envs,
+            enable_grad=enable_grad,
         )
         self.build_env()
         self.gym_misc()

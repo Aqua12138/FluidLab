@@ -10,7 +10,11 @@ from fluidlab.fluidengine.taichi_env import TaichiEnv
 from fluidlab.fluidengine.losses import *
 
 class NewPouringEnv(FluidEnv):
-    def __init__(self, version, loss=True, loss_type='diff', seed=None, renderer_type='GGUI', material='WATER'):
+    def __init__(self, version, loss=True, loss_type='diff', seed=None, renderer_type='GGUI', material='WATER',
+                 num_envs=1, enable_grad=True):
+        self.num_envs = num_envs
+        self.enable_grad = enable_grad
+        
         if seed is not None:
             self.seed(seed)
 
@@ -24,6 +28,10 @@ class NewPouringEnv(FluidEnv):
         self.renderer_type         = renderer_type
         self.material              = material  # 材料类型，默认为 WATER
 
+        # Initialize Taichi with appropriate memory settings
+        from fluidlab.fluidengine.taichi_env import init_taichi
+        init_taichi(num_envs=num_envs, enable_grad=enable_grad)
+
         # create a taichi env
         self.taichi_env = TaichiEnv(
             dim=3,
@@ -31,7 +39,9 @@ class NewPouringEnv(FluidEnv):
             max_substeps_local=20,
             gravity=(0.0, -9.8, 0.0),
             horizon=self.horizon,
-            ckpt_dest="cpu"
+            ckpt_dest="cpu",
+            num_envs=num_envs,
+            enable_grad=enable_grad,
         )
         self.build_env()
         self.gym_misc()

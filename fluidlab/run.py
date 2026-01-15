@@ -4,6 +4,8 @@ import torch
 import random
 import argparse
 import numpy as np
+import sys
+from time import time
 
 import fluidlab.envs
 # from RheoAgent.fluidlab.fluidengine.algorithms.utils.common import print_info  # 已移除，未使用
@@ -32,22 +34,40 @@ def get_args():
     parser.add_argument("--auto_rotate_speed", type=float, default=0.03, help='Rotation speed for auto rotate mode (action_v[5] value)')
     parser.add_argument("--auto_rotate_wait_steps", type=int, default=0, help='Number of steps to wait (pause) before starting rotation')
     parser.add_argument("--auto_rotate_stop_steps", type=int, default=0, help='Number of steps to stop (pause) after rotation ends')
-
+    
+    # GPU parallel environment parameters
+    parser.add_argument("--num_envs", type=int, default=1, 
+                       help='Number of parallel environments (GPU batch parallelism)')
+    parser.add_argument("--no_grad", action='store_true', 
+                       help='Disable gradient computation (inference mode, saves memory)')
 
     args = parser.parse_args()
 
     return args
 
-def make_env_with_renderer(env_name, seed, loss, loss_type, renderer_type):
+def make_env_with_renderer(env_name, seed, loss, loss_type, renderer_type, num_envs=1, enable_grad=True):
     """
     Create environment, only passing renderer_type if the environment supports it.
+    
+    Args:
+        num_envs: Number of parallel environments (GPU batch parallelism)
+        enable_grad: Whether to enable gradient computation (False for inference mode)
     """
-    # Try with renderer_type first
+    # Initialize Taichi with appropriate settings BEFORE creating env
+    from fluidlab.fluidengine.taichi_env import init_taichi
+    init_taichi(num_envs=num_envs, enable_grad=enable_grad)
+    
+    # Try with all parameters first
     try:
-        return gym.make(env_name, seed=seed, loss=loss, loss_type=loss_type, renderer_type=renderer_type)
+        return gym.make(env_name, seed=seed, loss=loss, loss_type=loss_type, 
+                       renderer_type=renderer_type, num_envs=num_envs, enable_grad=enable_grad)
     except TypeError:
-        # If renderer_type is not supported, try without it
-        return gym.make(env_name, seed=seed, loss=loss, loss_type=loss_type)
+        # If new params not supported, try with just renderer_type
+        try:
+            return gym.make(env_name, seed=seed, loss=loss, loss_type=loss_type, renderer_type=renderer_type)
+        except TypeError:
+            # If renderer_type is not supported, try without it
+            return gym.make(env_name, seed=seed, loss=loss, loss_type=loss_type)
 
 def auto_rotate_control(env, cfg=None, n_steps=1000, rotation_speed=0.03, wait_steps=0, stop_steps=0):
     """
@@ -129,6 +149,11 @@ def auto_rotate_control(env, cfg=None, n_steps=1000, rotation_speed=0.03, wait_s
     if action_p is not None:
         taichi_env.apply_agent_action_p(action_p)
     
+    # FPS tracking for simulation steps
+    sim_fps_timer = time()
+    sim_fps_counter = 0
+    sim_fps_interval = 1.0  # Update every 1 second
+    
     # Main control loop
     try:
         # Phase 1: Wait steps (pause, no rotation) - let fluid stabilize
@@ -139,16 +164,27 @@ def auto_rotate_control(env, cfg=None, n_steps=1000, rotation_speed=0.03, wait_s
                 action_v = np.zeros(6)
                 
                 # Step environment
+                step_start = time()
                 taichi_env.step(action_v)
+                sim_fps_counter += 1
                 
                 # Render
                 if not is_on_server():
                     taichi_env.render('human')
                 
+                # Print simulation FPS
+                elapsed = time() - sim_fps_timer
+                if elapsed >= sim_fps_interval:
+                    sim_fps = sim_fps_counter / elapsed
+                    sys.stdout.write(f'\r[Sim FPS: {sim_fps:.1f}] ')
+                    sys.stdout.flush()
+                    sim_fps_counter = 0
+                    sim_fps_timer = time()
+                
                 # Progress indicator
                 if (step + 1) % 100 == 0:
-                    print(f"  暂停中: {step + 1}/{wait_steps} 步")
-            print(f"阶段1完成: 流体已稳定\n")
+                    print(f"\n  暂停中: {step + 1}/{wait_steps} 步")
+            print(f"\n阶段1完成: 流体已稳定\n")
         
         # Phase 2: Auto rotate for n_steps
         print(f"阶段2: 开始旋转，运行 {n_steps} 步...")
@@ -159,15 +195,25 @@ def auto_rotate_control(env, cfg=None, n_steps=1000, rotation_speed=0.03, wait_s
             
             # Step environment
             taichi_env.step(action_v)
+            sim_fps_counter += 1
             
             # Render
             if not is_on_server():
                 taichi_env.render('human')
             
+            # Print simulation FPS
+            elapsed = time() - sim_fps_timer
+            if elapsed >= sim_fps_interval:
+                sim_fps = sim_fps_counter / elapsed
+                sys.stdout.write(f'\r[Sim FPS: {sim_fps:.1f}] ')
+                sys.stdout.flush()
+                sim_fps_counter = 0
+                sim_fps_timer = time()
+            
             # Progress indicator
             if (step + 1) % 100 == 0:
-                print(f"  旋转中: {step + 1}/{n_steps} 步")
-        print(f"阶段2完成: 旋转已结束\n")
+                print(f"\n  旋转中: {step + 1}/{n_steps} 步")
+        print(f"\n阶段2完成: 旋转已结束\n")
         
         # Phase 3: Stop steps (pause after rotation) - let fluid stabilize
         if stop_steps > 0:
@@ -178,21 +224,33 @@ def auto_rotate_control(env, cfg=None, n_steps=1000, rotation_speed=0.03, wait_s
                 
                 # Step environment
                 taichi_env.step(action_v)
+                sim_fps_counter += 1
                 
                 # Render
                 if not is_on_server():
                     taichi_env.render('human')
                 
+                # Print simulation FPS
+                elapsed = time() - sim_fps_timer
+                if elapsed >= sim_fps_interval:
+                    sim_fps = sim_fps_counter / elapsed
+                    sys.stdout.write(f'\r[Sim FPS: {sim_fps:.1f}] ')
+                    sys.stdout.flush()
+                    sim_fps_counter = 0
+                    sim_fps_timer = time()
+                
                 # Progress indicator
                 if (step + 1) % 100 == 0:
-                    print(f"  停止中: {step + 1}/{stop_steps} 步")
-            print(f"阶段3完成: 观察结束\n")
+                    print(f"\n  停止中: {step + 1}/{stop_steps} 步")
+            print(f"\n阶段3完成: 观察结束\n")
     
     except KeyboardInterrupt:
         print("\n自动旋转控制已停止")
     finally:
         total_steps = wait_steps + n_steps + stop_steps
         print(f"\n自动旋转完成，共运行 {total_steps} 步（暂停{wait_steps} + 旋转{n_steps} + 停止{stop_steps}）")
+        sys.stdout.write('\n')  # New line after FPS output
+        sys.stdout.flush()
 
 def keyboard_control(env, cfg=None):
     """
@@ -294,6 +352,11 @@ def keyboard_control(env, cfg=None):
     if action_p is not None:
         taichi_env.apply_agent_action_p(action_p)
     
+    # FPS tracking for simulation steps
+    sim_fps_timer = time()
+    sim_fps_counter = 0
+    sim_fps_interval = 1.0  # Update every 1 second
+    
     # Main control loop
     try:
         while True:
@@ -302,10 +365,20 @@ def keyboard_control(env, cfg=None):
             
             # Step environment
             taichi_env.step(action)
+            sim_fps_counter += 1
             
             # Render
             if not is_on_server():
                 taichi_env.render('human')
+            
+            # Print simulation FPS
+            elapsed = time() - sim_fps_timer
+            if elapsed >= sim_fps_interval:
+                sim_fps = sim_fps_counter / elapsed
+                sys.stdout.write(f'\r[Sim FPS: {sim_fps:.1f}] ')
+                sys.stdout.flush()
+                sim_fps_counter = 0
+                sim_fps_timer = time()
             
             # Check for quit
             if hasattr(policy, 'keys_activated') and 'q' in policy.keys_activated:
@@ -318,6 +391,8 @@ def keyboard_control(env, cfg=None):
         # Clean up keyboard listener
         if hasattr(policy, 'listener'):
             policy.listener.stop()
+        sys.stdout.write('\n')  # New line after FPS output
+        sys.stdout.flush()
 
 def main():
     args = get_args()
@@ -325,13 +400,18 @@ def main():
         cfg = load_config(args.cfg_file)
     else:
         cfg = None
+    
+    # Determine enable_grad from args
+    enable_grad = not args.no_grad
 
     if args.auto_rotate:
         if cfg is not None:
-            env = make_env_with_renderer(cfg.EXP.env_name, cfg.EXP.seed, False, 'diff', args.renderer_type)
+            env = make_env_with_renderer(cfg.EXP.env_name, cfg.EXP.seed, False, 'diff', args.renderer_type,
+                                        num_envs=args.num_envs, enable_grad=enable_grad)
         else:
             if args.env_name:
-                env = make_env_with_renderer(args.env_name, args.seed, False, 'diff', args.renderer_type)
+                env = make_env_with_renderer(args.env_name, args.seed, False, 'diff', args.renderer_type,
+                                            num_envs=args.num_envs, enable_grad=enable_grad)
             else:
                 print("Error: --auto_rotate requires either --cfg_file or --env_name")
                 return
@@ -341,10 +421,12 @@ def main():
 
     if args.keyboard:
         if cfg is not None:
-            env = make_env_with_renderer(cfg.EXP.env_name, cfg.EXP.seed, False, 'diff', args.renderer_type)
+            env = make_env_with_renderer(cfg.EXP.env_name, cfg.EXP.seed, False, 'diff', args.renderer_type,
+                                        num_envs=args.num_envs, enable_grad=enable_grad)
         else:
             if args.env_name:
-                env = make_env_with_renderer(args.env_name, args.seed, False, 'diff', args.renderer_type)
+                env = make_env_with_renderer(args.env_name, args.seed, False, 'diff', args.renderer_type,
+                                            num_envs=args.num_envs, enable_grad=enable_grad)
             else:
                 print("Error: --keyboard requires either --cfg_file or --env_name")
                 return
@@ -354,25 +436,32 @@ def main():
 
     if args.record:
         if cfg is not None:
-            env = make_env_with_renderer(cfg.EXP.env_name, cfg.EXP.seed, False, 'diff', args.renderer_type)
+            env = make_env_with_renderer(cfg.EXP.env_name, cfg.EXP.seed, False, 'diff', args.renderer_type,
+                                        num_envs=args.num_envs, enable_grad=enable_grad)
         else:
-            env = make_env_with_renderer(args.env_name, args.seed, False, 'diff', args.renderer_type)
+            env = make_env_with_renderer(args.env_name, args.seed, False, 'diff', args.renderer_type,
+                                        num_envs=args.num_envs, enable_grad=enable_grad)
         record_target(env, path=args.path, user_input=args.user_input)
     elif args.replay_target:
         if cfg is not None:
-            env = make_env_with_renderer(cfg.EXP.env_name, cfg.EXP.seed, False, 'diff', args.renderer_type)
+            env = make_env_with_renderer(cfg.EXP.env_name, cfg.EXP.seed, False, 'diff', args.renderer_type,
+                                        num_envs=args.num_envs, enable_grad=enable_grad)
         else:
-            env = make_env_with_renderer(args.env_name, args.seed, False, 'diff', args.renderer_type)
+            env = make_env_with_renderer(args.env_name, args.seed, False, 'diff', args.renderer_type,
+                                        num_envs=args.num_envs, enable_grad=enable_grad)
         replay_target(env)
     elif args.replay_policy:
         if cfg is not None:
-            env = make_env_with_renderer(cfg.EXP.env_name, cfg.EXP.seed, False, 'diff', args.renderer_type)
+            env = make_env_with_renderer(cfg.EXP.env_name, cfg.EXP.seed, False, 'diff', args.renderer_type,
+                                        num_envs=args.num_envs, enable_grad=enable_grad)
         else:
-            env = make_env_with_renderer(args.env_name, args.seed, False, 'diff', args.renderer_type)
+            env = make_env_with_renderer(args.env_name, args.seed, False, 'diff', args.renderer_type,
+                                        num_envs=args.num_envs, enable_grad=enable_grad)
         replay_policy(env, path=args.path)
     else:
         logger = Logger(args.exp_name)
-        env = make_env_with_renderer(cfg.EXP.env_name, cfg.EXP.seed, True, 'diff', args.renderer_type)
+        env = make_env_with_renderer(cfg.EXP.env_name, cfg.EXP.seed, True, 'diff', args.renderer_type,
+                                    num_envs=args.num_envs, enable_grad=enable_grad)
         solve_policy(env, logger, cfg.SOLVER)
 
 if __name__ == '__main__':

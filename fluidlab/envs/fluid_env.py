@@ -3,14 +3,34 @@ import gym
 import numpy as np
 from gym.spaces import Box
 from fluidlab.configs.macros import *
-from fluidlab.fluidengine.taichi_env import TaichiEnv
+from fluidlab.fluidengine.taichi_env import TaichiEnv, init_taichi
 import fluidlab.utils.misc as misc_utils
 
 class FluidEnv(gym.Env):
     '''
-    Base env class.
+    Base env class with GPU batch parallelism support.
+    
+    When num_envs > 1:
+    - observations have shape (num_envs, obs_dim)
+    - actions have shape (num_envs, action_dim)
+    - rewards have shape (num_envs,)
+    - dones have shape (num_envs,)
     '''    
-    def __init__(self, version, loss=True, loss_type='diff', seed=None, renderer_type='GGUI'):
+    def __init__(self, version, loss=True, loss_type='diff', seed=None, renderer_type='GGUI',
+                 num_envs=1, enable_grad=True):
+        """
+        Initialize FluidEnv.
+        
+        Args:
+            num_envs: Number of parallel environments (default 1 for backward compatibility)
+            enable_grad: Whether to enable gradient computation (affects memory usage)
+        """
+        self.num_envs = num_envs
+        self.enable_grad = enable_grad
+        
+        # Initialize Taichi with appropriate memory settings
+        init_taichi(num_envs=num_envs, enable_grad=enable_grad)
+        
         if seed is not None:
             self.seed(seed)
 
@@ -21,10 +41,10 @@ class FluidEnv(gym.Env):
         self.loss                  = loss
         self.loss_type             = loss_type
         self.action_range          = np.array([-1.0, 1.0])
-        self.renderer_type              = renderer_type
+        self.renderer_type         = renderer_type
 
-        # create a taichi env
-        self.taichi_env = TaichiEnv()
+        # create a taichi env with num_envs support
+        self.taichi_env = TaichiEnv(num_envs=num_envs, enable_grad=enable_grad)
         self.build_env()
         self.gym_misc()
 
@@ -86,18 +106,68 @@ class FluidEnv(gym.Env):
         if self.loss_type == 'default':
             self.horizon = self.horizon_action
         obs = self.reset()
-        self.observation_space = Box(DTYPE_NP(-np.inf), DTYPE_NP(np.inf), obs.shape, dtype=DTYPE_NP)
+        
+        # Observation space depends on num_envs
+        if self.num_envs == 1:
+            self.observation_space = Box(DTYPE_NP(-np.inf), DTYPE_NP(np.inf), obs.shape, dtype=DTYPE_NP)
+        else:
+            # For multi-env, obs has shape (num_envs, obs_dim)
+            single_obs_dim = obs.shape[1] if len(obs.shape) > 1 else obs.shape[0]
+            self.observation_space = Box(DTYPE_NP(-np.inf), DTYPE_NP(np.inf), (self.num_envs, single_obs_dim), dtype=DTYPE_NP)
+        
         if self.taichi_env.agent is not None:
-            self.action_space = Box(DTYPE_NP(self.action_range[0]), DTYPE_NP(self.action_range[1]), (self.taichi_env.agent.action_dim,), dtype=DTYPE_NP)
+            if self.num_envs == 1:
+                self.action_space = Box(DTYPE_NP(self.action_range[0]), DTYPE_NP(self.action_range[1]), 
+                                       (self.taichi_env.agent.action_dim,), dtype=DTYPE_NP)
+            else:
+                self.action_space = Box(DTYPE_NP(self.action_range[0]), DTYPE_NP(self.action_range[1]), 
+                                       (self.num_envs, self.taichi_env.agent.action_dim), dtype=DTYPE_NP)
         else:
             self.action_space = None
 
-    def reset(self):
-        self.taichi_env.set_state(**self._init_state)
+    def reset(self, env_ids=None):
+        """
+        Reset environment(s).
+        
+        Args:
+            env_ids: If provided, only reset these specific environments.
+                     If None, reset all environments.
+        
+        Returns:
+            obs: Observations for reset environments. Shape (num_envs, obs_dim) or (obs_dim,)
+        """
+        if env_ids is None:
+            # Reset all environments
+            self.taichi_env.set_state(**self._init_state)
+        else:
+            # Partial reset - only reset specified environments
+            self.taichi_env.reset_envs(env_ids)
+        
         return self._get_obs()
 
-    def _get_obs(self):
-        state = self.taichi_env.get_state_RL()
+    def _get_obs(self, env_id=None):
+        """
+        Get observations for environment(s).
+        
+        Args:
+            env_id: If provided, get obs for single env. If None, get for all envs.
+        
+        Returns:
+            obs: Shape (num_envs, obs_dim) for multi-env, (obs_dim,) for single env
+        """
+        if self.num_envs == 1:
+            # Original single-env behavior
+            return self._get_single_obs(0)
+        else:
+            # Multi-env: get obs for all environments
+            obs_list = []
+            for env_id in range(self.num_envs):
+                obs_list.append(self._get_single_obs(env_id))
+            return np.stack(obs_list, axis=0)
+
+    def _get_single_obs(self, env_id):
+        """Get observation for a single environment."""
+        state = self.taichi_env.simulator.get_state_RL(env_id=env_id)
         obs   = []
 
         if 'x' in state:
@@ -125,26 +195,66 @@ class FluidEnv(gym.Env):
         return obs
 
     def _get_reward(self):
+        """Get reward(s). Returns shape (num_envs,) for multi-env, scalar for single."""
+        if self.taichi_env.loss is None:
+            if self.num_envs == 1:
+                return 0.0
+            else:
+                return np.zeros(self.num_envs, dtype=DTYPE_NP)
+        
         loss_info = self.taichi_env.get_step_loss()
-        return loss_info['reward']
+        reward = loss_info['reward']
+        
+        # Handle multi-env case
+        if self.num_envs > 1 and np.isscalar(reward):
+            # If loss doesn't support multi-env yet, broadcast
+            reward = np.full(self.num_envs, reward, dtype=DTYPE_NP)
+        
+        return reward
 
     def step(self, action):
-        action = action.clip(self.action_range[0], self.action_range[1])
+        """
+        Step all environments with given action(s).
         
-        self.taichi_env.step(action)
+        Args:
+            action: Shape (num_envs, action_dim) for multi-env, (action_dim,) for single
+        
+        Returns:
+            obs: Shape (num_envs, obs_dim) for multi-env, (obs_dim,) for single
+            reward: Shape (num_envs,) for multi-env, scalar for single
+            done: Shape (num_envs,) for multi-env, bool for single
+            info: dict with additional info
+        """
+        action = np.array(action).clip(self.action_range[0], self.action_range[1])
+        
+        # For multi-env, action should be (num_envs, action_dim)
+        # TODO: Currently simulator doesn't support batched actions directly
+        # For now, we assume all envs receive the same action
+        if self.num_envs > 1 and len(action.shape) == 1:
+            # Broadcast single action to all envs
+            action = np.tile(action, (self.num_envs, 1))
+        
+        self.taichi_env.step(action if self.num_envs == 1 else action[0])
 
         obs    = self._get_obs()
         reward = self._get_reward()
 
         assert self.t <= self.horizon
-        if self.t == self.horizon:
-            done = True
+        
+        if self.num_envs == 1:
+            # Single env case
+            done = self.t == self.horizon
+            if np.isnan(reward):
+                reward = -1000
+                done = True
         else:
-            done = False
-
-        if np.isnan(reward):
-            reward = -1000
-            done = True
+            # Multi-env case
+            dones = np.full(self.num_envs, self.t == self.horizon, dtype=bool)
+            nan_mask = np.isnan(reward)
+            if nan_mask.any():
+                reward[nan_mask] = -1000
+                dones[nan_mask] = True
+            done = dones
 
         info = dict()
         return obs, reward, done, info

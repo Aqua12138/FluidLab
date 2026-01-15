@@ -10,8 +10,12 @@ from fluidlab.fluidengine.taichi_env import TaichiEnv
 from fluidlab.fluidengine.losses import *
 
 class TableMaterialsEnv(FluidEnv):
-    def __init__(self, version, loss=True, loss_type='diff', seed=None, renderer_type='GGUI'):
-
+    def __init__(self, version, loss=True, loss_type='diff', seed=None, renderer_type='GGUI',
+                 num_envs=1, enable_grad=True):
+        # Set num_envs and enable_grad before calling parent methods
+        self.num_envs = num_envs
+        self.enable_grad = enable_grad
+        
         if seed is not None:
             self.seed(seed)
 
@@ -24,6 +28,10 @@ class TableMaterialsEnv(FluidEnv):
         self.action_range          = np.array([-0.01, 0.01])  # 位置和旋转的控制范围
         self.renderer_type         = renderer_type
 
+        # Initialize Taichi with appropriate memory settings
+        from fluidlab.fluidengine.taichi_env import init_taichi
+        init_taichi(num_envs=num_envs, enable_grad=enable_grad)
+
         # create a taichi env
         # quality=2 提高网格分辨率（从64到128），减少穿模问题
         self.taichi_env = TaichiEnv(
@@ -33,6 +41,8 @@ class TableMaterialsEnv(FluidEnv):
             gravity=(0.0, -9.8, 0.0),
             horizon=self.horizon,
             quality=2,  # 提高网格分辨率以减少穿模（默认1，2倍分辨率）
+            num_envs=num_envs,
+            enable_grad=enable_grad,
         )
         self.build_env()
         self.gym_misc()
@@ -146,7 +156,7 @@ class TableMaterialsEnv(FluidEnv):
             self.taichi_env.setup_renderer(
                 type='GL',
                 # render_particle=False,  # 默认就是 False，使用流体渲染模式
-                camera_pos=(0.5, 0.8, 3.0),
+                camera_pos=(0.5, 10, 3.0),
                 camera_lookat=(0.5, 0.3, 0.5),
                 fov=30,
                 light_pos=(-3.5, 15.0, 0.55),  # GL renderer 使用 light_pos 而不是 lights
