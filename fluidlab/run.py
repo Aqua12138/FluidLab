@@ -237,7 +237,7 @@ def keyboard_control(env, cfg=None):
                     init_p = np.concatenate([init_pos_xyz, euler])
                 else:
                     # For 3D action, just use position
-                    init_p = effector.init_pos
+                init_p = effector.init_pos
 
     # Fallback: use default position based on action dimension
     if init_p is None:
@@ -338,7 +338,7 @@ def main():
         env.reset()
         auto_rotate_control(env, cfg, n_steps=args.auto_rotate_steps, rotation_speed=args.auto_rotate_speed, wait_steps=args.auto_rotate_wait_steps, stop_steps=args.auto_rotate_stop_steps)
         return
-    
+
     if args.keyboard:
         if cfg is not None:
             env = make_env_with_renderer(cfg.EXP.env_name, cfg.EXP.seed, False, 'diff', args.renderer_type)

@@ -31,6 +31,7 @@ class NewPouringEnv(FluidEnv):
             max_substeps_local=20,
             gravity=(0.0, -9.8, 0.0),
             horizon=self.horizon,
+            ckpt_dest="cpu"
         )
         self.build_env()
         self.gym_misc()
@@ -42,7 +43,6 @@ class NewPouringEnv(FluidEnv):
         self.agent = self.taichi_env.agent
 
     def setup_statics(self):
-        # 使用与 agent 相同的配置，确保大小和颜色一致
         self.taichi_env.add_static(
             file='glass.obj',
             file_vis='glass_vis.obj',  # 使用与 agent 相同的 file_vis，确保颜色一致

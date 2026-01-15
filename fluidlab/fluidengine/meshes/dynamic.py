@@ -21,15 +21,15 @@ class Dynamic(Mesh):
         self.vertex_normals = ti.Vector.field(3, dtype=ti.f32, shape=(self.n_vertices))
 
     @ti.kernel
-    def update_vertices(self, f: ti.i32):
+    def update_vertices(self, batch_id: ti.i32, f: ti.i32):
         for i in self.vertices:
-            self.vertices[i] = ti.cast(geom_utils.transform_by_trans_quat_ti(self.init_vertices[i], self.container.pos[f], self.container.quat[f]), self.vertices.dtype)
-            self.vertex_normals[i] = ti.cast(geom_utils.transform_by_quat_ti(self.init_vertex_normals[i], self.container.quat[f]), self.vertices.dtype)
+            self.vertices[i] = ti.cast(geom_utils.transform_by_trans_quat_ti(self.init_vertices[i], self.container.pos[batch_id, f], self.container.quat[batch_id, f]), self.vertices.dtype)
+            self.vertex_normals[i] = ti.cast(geom_utils.transform_by_quat_ti(self.init_vertex_normals[i], self.container.quat[batch_id, f]), self.vertices.dtype)
 
     @ti.func
-    def sdf(self, f, pos_world):
+    def sdf(self, batch_id, f, pos_world):
         # sdf value from world coordinate
-        pos_mesh = geom_utils.inv_transform_by_trans_quat_ti(pos_world, self.container.pos[f], self.container.quat[f])
+        pos_mesh = geom_utils.inv_transform_by_trans_quat_ti(pos_world, self.container.pos[batch_id, f], self.container.quat[batch_id, f])
         pos_voxels = geom_utils.transform_by_T_ti(pos_mesh, self.T_mesh_to_voxels[None], DTYPE_TI)
 
         return self.sdf_(pos_voxels)
@@ -52,16 +52,16 @@ class Dynamic(Mesh):
         return signed_dist
 
     @ti.func
-    def normal(self, f, pos_world):
+    def normal(self, batch_id, f, pos_world):
         # compute normal with finite difference
-        pos_mesh = geom_utils.inv_transform_by_trans_quat_ti(pos_world, self.container.pos[f], self.container.quat[f])
+        pos_mesh = geom_utils.inv_transform_by_trans_quat_ti(pos_world, self.container.pos[batch_id, f], self.container.quat[batch_id, f])
         pos_voxels = geom_utils.transform_by_T_ti(pos_mesh, self.T_mesh_to_voxels[None], DTYPE_TI)
         normal_vec_voxels = self.normal_(pos_voxels)
 
         R_voxels_to_mesh = self.T_mesh_to_voxels[None][:3, :3].inverse()
         normal_vec_mesh = R_voxels_to_mesh @ normal_vec_voxels
 
-        normal_vec_world = geom_utils.transform_by_quat_ti(normal_vec_mesh, self.container.quat[f])
+        normal_vec_world = geom_utils.transform_by_quat_ti(normal_vec_mesh, self.container.quat[batch_id, f])
         normal_vec_world = geom_utils.normalize(normal_vec_world)
 
         return normal_vec_world
@@ -84,26 +84,26 @@ class Dynamic(Mesh):
         return normal_vec
 
     @ti.func
-    def collider_v(self, f, pos_world, dt):
-        pos_mesh = geom_utils.inv_transform_by_trans_quat_ti(pos_world, self.container.pos[f], self.container.quat[f])
-        pos_world_new = geom_utils.transform_by_trans_quat_ti(pos_mesh, self.container.pos[f+1], self.container.quat[f+1])
+    def collider_v(self, batch_id, f, pos_world, dt):
+        pos_mesh = geom_utils.inv_transform_by_trans_quat_ti(pos_world, self.container.pos[batch_id, f], self.container.quat[batch_id, f])
+        pos_world_new = geom_utils.transform_by_trans_quat_ti(pos_mesh, self.container.pos[batch_id, f+1], self.container.quat[batch_id, f+1])
         collider_v = (pos_world_new - pos_world) / dt
         return collider_v
 
     @ti.func
-    def collide(self, f, pos_world, mat_v, dt):
+    def collide(self, batch_id, f, pos_world, mat_v, dt):
         if ti.static(self.has_dynamics):
-            signed_dist = self.sdf(f, pos_world)
+            signed_dist = self.sdf(batch_id, f, pos_world)
             influence = min(ti.exp(-signed_dist * self.softness), 1)
             if signed_dist <= 0 or (self.softness > 0 and influence > 0.1):
-                collider_v = self.collider_v(f, pos_world, dt)
+                collider_v = self.collider_v(batch_id, f, pos_world, dt)
 
                 if ti.static(self.friction > 10.0):
                     mat_v = collider_v
                 else:
                     # v w.r.t collider
                     rel_v = mat_v - collider_v
-                    normal_vec = self.normal(f, pos_world)
+                    normal_vec = self.normal(batch_id, f, pos_world)
                     normal_component = rel_v.dot(normal_vec)
 
                     # remove inward velocity, if any
@@ -151,10 +151,10 @@ class Dynamic(Mesh):
 
 
     @ti.func
-    def is_collide(self, f, pos_world):
+    def is_collide(self, batch_id, f, pos_world):
         flag = 0
         if ti.static(self.has_dynamics):
-            signed_dist = self.sdf(f, pos_world)
+            signed_dist = self.sdf(batch_id, f, pos_world)
             if signed_dist <= 0:
                 flag = 1
 

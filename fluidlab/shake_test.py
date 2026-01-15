@@ -363,8 +363,8 @@ def shake_test(env, cfg=None,
         try:
             if not is_on_server() and os.getenv('DISPLAY') is not None:
                 # Only try to show if we have a display
-                plt.show()
-            else:
+            plt.show()
+        else:
                 plt.close()
         except Exception as e:
             print(f"Note: Could not display plot (this is OK): {e}")

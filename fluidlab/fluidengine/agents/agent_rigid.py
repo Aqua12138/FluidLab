@@ -19,5 +19,5 @@ class AgentRigid(Agent):
         self.rigid = self.effectors[0]
 
     @ti.func
-    def collide(self, f, pos_world, mat_v, dt):
-        return self.rigid.collide(f, pos_world, mat_v, dt)
+    def collide(self, batch_id, f, pos_world, mat_v, dt):
+        return self.rigid.collide(batch_id, f, pos_world, mat_v, dt)

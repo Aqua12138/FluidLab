@@ -24,15 +24,15 @@ class Rigid(Effector):
             **kwargs
         )
 
-    def move(self, f):
-        self.move_kernel(f)
-        self.update_latest_pos(f)
-        self.update_mesh_pose(f)
+    def move(self, batch_id, f):
+        self.move_kernel(batch_id, f)
+        self.update_latest_pos(batch_id, f)
+        self.update_mesh_pose(batch_id, f)
         
-    def update_mesh_pose(self, f):
+    def update_mesh_pose(self, batch_id, f):
         # For visualization only. No need to compute grad.
-        self.mesh.update_vertices(f)
+        self.mesh.update_vertices(batch_id, f)
 
     @ti.func
-    def collide(self, f, pos_world, mat_v, dt):
-        return self.mesh.collide(f, pos_world, mat_v, dt)
+    def collide(self, batch_id, f, pos_world, mat_v, dt):
+        return self.mesh.collide(batch_id, f, pos_world, mat_v, dt)

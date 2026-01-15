@@ -20,20 +20,20 @@ class AgentInjector(Agent):
 
         self.injector.set_act_range(self.sim.particles_ng.used.to_numpy()[0])
 
-    def act(self, f, f_global):
-        self.act_kernel(f, f_global)
-        self.check_act_range(f)
+    def act(self, batch_id, f, f_global):
+        self.act_kernel(batch_id, f, f_global)
+        self.check_act_range(batch_id, f)
 
-    def act_grad(self, f, f_global):
-        self.act_kernel.grad(f, f_global)
+    def act_grad(self, batch_id, f, f_global):
+        self.act_kernel.grad(batch_id, f, f_global)
 
     @ti.kernel
-    def act_kernel(self, f: ti.i32, f_global: ti.i32):
-        self.injector.act(f, f_global, self.sim.particles_ng.used, self.sim.particles.x, self.sim.particles.v)
+    def act_kernel(self, batch_id: ti.i32, f: ti.i32, f_global: ti.i32):
+        self.injector.act(batch_id, f, f_global, self.sim.particles_ng, self.sim.particles)
 
     @ti.func
-    def collide(self, f, pos_world, mat_v, dt):
+    def collide(self, batch_id, f, pos_world, mat_v, dt):
         return mat_v
 
-    def check_act_range(self, f):
-        assert self.injector.act_id[f+1] <= self.injector.act_range.shape[0], 'too many particles added'
+    def check_act_range(self, batch_id, f):
+        assert self.injector.act_id[batch_id, f+1] <= self.injector.act_range.shape[0], 'too many particles added'
