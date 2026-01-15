@@ -187,3 +187,122 @@ python fluidlab/run.py \
   year={2023}
 }
 ```
+
+
+
+# FluidLab GLRenderer 配置指南
+
+## 1. 安装 Docker
+
+```bash
+curl -fsSL https://get.docker.com | bash
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+## 2. 安装 NVIDIA Container Toolkit
+
+```bash
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+sudo apt-get update
+sudo apt-get install -y nvidia-container-toolkit
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+```
+
+## 3. 验证 GPU 访问
+
+```bash
+sudo docker run --rm --gpus all nvidia/cuda:12.2.0-base-ubuntu22.04 nvidia-smi
+```
+
+## 4. 构建 Docker 镜像
+
+```bash
+cd /home/xu/FluidLab
+sudo docker build -t fluidlab-glrenderer fluidlab/fluidengine/renderers/gl_renderer_src
+```
+
+## 5. 编译 GL 渲染器
+
+### 5.1 开放 X11 显示权限
+
+```bash
+xhost +local:root
+```
+
+### 5.2 启动容器
+
+```bash
+cd /home/xu/FluidLab
+sudo docker run \
+  -v ${PWD}/fluidlab/fluidengine/renderers/gl_renderer_src:/workspace \
+  -v /home/xu/miniconda3:/home/xu/miniconda3 \
+  --gpus all \
+  -e DISPLAY=$DISPLAY \
+  -e QT_X11_NO_MITSHM=1 \
+  -v /tmp/.X11-unix:/tmp/.X11-unix \
+  -it fluidlab-glrenderer:latest bash
+```
+
+### 5.3 容器内编译
+
+```bash
+source /home/xu/miniconda3/bin/activate rheo
+cd /workspace
+source prepare.sh
+source compile.sh
+exit
+```
+
+编译完成后，`.so` 文件会自动保存到宿主机目录。
+
+## 6. 解决 CUDA-OpenGL 互操作问题
+
+### 6.1 检查显卡配置
+
+```bash
+lspci | grep -i vga
+prime-select query
+nvidia-smi
+```
+
+### 6.2 临时使用 NVIDIA GPU 渲染
+
+```bash
+__NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia python fluidlab/run.py \
+  --cfg_file configs/exp_tablematerials.yaml \
+  --auto_rotate \
+  --auto_rotate_steps 350 \
+  --auto_rotate_speed 0.005 \
+  --auto_rotate_wait_steps 100 \
+  --auto_rotate_stop_steps 2000 \
+  --renderer_type GL
+```
+
+### 6.3 永久切换到 NVIDIA 专用模式
+
+```bash
+sudo prime-select nvidia
+sudo reboot
+```
+
+重启后，OpenGL 将默认使用 NVIDIA GPU，无需环境变量。
+
+## 7. 验证 GL 渲染器
+
+```bash
+python fluidlab/run.py \
+  --cfg_file configs/exp_tablematerials.yaml \
+  --auto_rotate \
+  --auto_rotate_steps 350 \
+  --auto_rotate_speed 0.005 \
+  --auto_rotate_wait_steps 100 \
+  --auto_rotate_stop_steps 2000 \
+  --renderer_type GL
+```

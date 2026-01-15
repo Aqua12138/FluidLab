@@ -184,11 +184,8 @@ namespace OGL_Renderer
 			glCompileShader(geometryShader);
 			GlslPrintShaderLog(geometryShader);
 
-			// hack, force billboard gs mode
+			// Geometry shader input/output types are now declared in shader code via layout()
 			glAttachShader(program, geometryShader);
-			glProgramParameteriEXT(program, GL_GEOMETRY_VERTICES_OUT_EXT, 4);
-			glProgramParameteriEXT(program, GL_GEOMETRY_INPUT_TYPE_EXT, GL_POINTS);
-			glProgramParameteriEXT(program, GL_GEOMETRY_OUTPUT_TYPE_EXT, GL_TRIANGLE_STRIP);
 		}
 
 		glLinkProgram(program);

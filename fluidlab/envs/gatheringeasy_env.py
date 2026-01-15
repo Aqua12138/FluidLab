@@ -87,14 +87,14 @@ class GatheringEasyEnv(FluidEnv):
         )
 
     def setup_renderer(self):
-        self.taichi_env.setup_renderer(
-            # render_particle=True,
-            camera_pos=(-0.15, 2.82, 2.5),
-            camera_lookat=(0.5, 0.5, 0.5),
-            fov=30,
-            lights=[{'pos': (0.5, 1.5, 0.5), 'color': (0.5, 0.5, 0.5)},
-                    {'pos': (0.5, 1.5, 1.5), 'color': (0.5, 0.5, 0.5)}],
-        )
+            self.taichi_env.setup_renderer(
+                # render_particle=True,
+                camera_pos=(-0.15, 2.82, 2.5),
+                camera_lookat=(0.5, 0.5, 0.5),
+                fov=30,
+                lights=[{'pos': (0.5, 1.5, 0.5), 'color': (0.5, 0.5, 0.5)},
+                        {'pos': (0.5, 1.5, 1.5), 'color': (0.5, 0.5, 0.5)}],
+            )
 
     def setup_loss(self):
         self.taichi_env.setup_loss(

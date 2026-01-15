@@ -81,3 +81,4 @@ python fluidlab/run.py --env_name Pouring-v0 --keyboard
 | i | 视角向下移动 | 相机 -y 方向 |
 | 鼠标右键 + 拖拽 | 旋转视角 | 相机旋转 |
 
+

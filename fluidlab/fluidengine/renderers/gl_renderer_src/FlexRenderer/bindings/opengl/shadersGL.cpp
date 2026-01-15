@@ -1539,12 +1539,20 @@ namespace OGL_Renderer
 	//--------------------------------------------------------
 	// Ellipsoid shaders
 	//
-	const char *vertexEllipsoidDepthShader = "#version 120\n" STRINGIFY(
+	const char *vertexEllipsoidDepthShader = "#version 150 compatibility\n" STRINGIFY(
 
 		// rotation matrix in xyz, scale in w
-		attribute vec4 q1;
-		attribute vec4 q2;
-		attribute vec4 q3;
+		in vec4 q1;
+		in vec4 q2;
+		in vec4 q3;
+
+		// outputs to geometry shader
+		out vec4 vTexCoord0;
+		out vec4 vTexCoord1;
+		out vec4 vTexCoord2;
+		out vec4 vTexCoord3;
+		out vec4 vTexCoord4;
+		out vec4 vTexCoord5;
 
 		// returns 1.0 for x==0.0 (unlike glsl)
 		float Sign(float x) { return x < 0.0 ? -1.0 : 1.0; }
@@ -1613,7 +1621,7 @@ namespace OGL_Renderer
 			solveQuadratic(a2, b2, c2, ymin, ymax);
 
 			gl_Position = vec4(worldPos.xyz, 1.0);
-			gl_TexCoord[0] = vec4(xmin, xmax, ymin, ymax);
+			vTexCoord0 = vec4(xmin, xmax, ymin, ymax);
 
 			// construct inverse quadric matrix (used for ray-casting in parameter space)
 			mat4 invq;
@@ -1629,24 +1637,39 @@ namespace OGL_Renderer
 			invq = invq * gl_ModelViewMatrixInverse;
 
 			// pass down
-			gl_TexCoord[1] = invq[0];
-			gl_TexCoord[2] = invq[1];
-			gl_TexCoord[3] = invq[2];
-			gl_TexCoord[4] = invq[3];
+			vTexCoord1 = invq[0];
+			vTexCoord2 = invq[1];
+			vTexCoord3 = invq[2];
+			vTexCoord4 = invq[3];
 
 			// compute ndc pos for frustrum culling in GS
 			vec4 ndcPos = gl_ModelViewProjectionMatrix * vec4(worldPos.xyz, 1.0);
-			gl_TexCoord[5] = ndcPos / ndcPos.w;
+			vTexCoord5 = ndcPos / ndcPos.w;
 		});
 
 	const char *geometryEllipsoidDepthShader =
-		"#version 120\n"
-		"#extension GL_EXT_geometry_shader4 : enable\n" STRINGIFY(
+		"#version 150 compatibility\n"
+		"layout(points) in;\n"
+		"layout(triangle_strip, max_vertices = 4) out;\n" STRINGIFY(
+			// inputs from vertex shader
+			in vec4 vTexCoord0[];
+			in vec4 vTexCoord1[];
+			in vec4 vTexCoord2[];
+			in vec4 vTexCoord3[];
+			in vec4 vTexCoord4[];
+			in vec4 vTexCoord5[];
+
+			// outputs to fragment shader
+			out vec4 gTexCoord0;
+			out vec4 gTexCoord1;
+			out vec4 gTexCoord2;
+			out vec4 gTexCoord3;
+
 			void main()
 			{
-				vec3 pos = gl_PositionIn[0].xyz;
-				vec4 bounds = gl_TexCoordIn[0][0];
-				vec4 ndcPos = gl_TexCoordIn[0][5];
+				vec3 pos = gl_in[0].gl_Position.xyz;
+				vec4 bounds = vTexCoord0[0];
+				vec4 ndcPos = vTexCoord5[0];
 
 				// frustrum culling
 				const float ndcBound = 1.0;
@@ -1665,10 +1688,10 @@ namespace OGL_Renderer
 				float ymax = bounds.w;
 
 				// inv quadric transform
-				gl_TexCoord[0] = gl_TexCoordIn[0][1];
-				gl_TexCoord[1] = gl_TexCoordIn[0][2];
-				gl_TexCoord[2] = gl_TexCoordIn[0][3];
-				gl_TexCoord[3] = gl_TexCoordIn[0][4];
+				gTexCoord0 = vTexCoord1[0];
+				gTexCoord1 = vTexCoord2[0];
+				gTexCoord2 = vTexCoord3[0];
+				gTexCoord3 = vTexCoord4[0];
 
 				gl_Position = vec4(xmin, ymax, 0.0, 1.0);
 				EmitVertex();
@@ -1684,10 +1707,16 @@ namespace OGL_Renderer
 			});
 
 	// pixel shader for rendering points as shaded spheres
-	const char *fragmentEllipsoidDepthShader = "#version 120\n" STRINGIFY(
+	const char *fragmentEllipsoidDepthShader = "#version 150 compatibility\n" STRINGIFY(
 
 		uniform vec3 invViewport;
 		uniform vec3 invProjection;
+
+		// inputs from geometry shader
+		in vec4 gTexCoord0;
+		in vec4 gTexCoord1;
+		in vec4 gTexCoord2;
+		in vec4 gTexCoord3;
 
 		float Sign(float x) { return x < 0.0 ? -1.0 : 1.0; }
 
@@ -1726,10 +1755,10 @@ namespace OGL_Renderer
 		{
 			// transform from view space to parameter space
 			mat4 invQuadric;
-			invQuadric[0] = gl_TexCoord[0];
-			invQuadric[1] = gl_TexCoord[1];
-			invQuadric[2] = gl_TexCoord[2];
-			invQuadric[3] = gl_TexCoord[3];
+			invQuadric[0] = gTexCoord0;
+			invQuadric[1] = gTexCoord1;
+			invQuadric[2] = gTexCoord2;
+			invQuadric[3] = gTexCoord3;
 
 			vec4 ndcPos = vec4(gl_FragCoord.xy * invViewport.xy * vec2(2.0, 2.0) - vec2(1.0, 1.0), -1.0, 1.0);
 			vec4 viewDir = gl_ProjectionMatrixInverse * ndcPos;
@@ -2646,7 +2675,7 @@ namespace OGL_Renderer
 	//------------------------------------------------------------------------------
 	// Diffuse Shading
 
-	const char *vertexDiffuseShader = STRINGIFY(
+	const char *vertexDiffuseShader = "#version 150 compatibility\n" STRINGIFY(
 
 		uniform float pointRadius; // point size in world space
 		uniform float pointScale;  // scale to calculate size in pixels
@@ -2656,6 +2685,14 @@ namespace OGL_Renderer
 		uniform float spotMin;
 		uniform float spotMax;
 		uniform vec4 color;
+
+		// outputs to geometry shader
+		out vec4 vTexCoord0;
+		out vec4 vTexCoord1;
+		out vec4 vTexCoord2;
+		out vec4 vTexCoord3;
+		out vec4 vTexCoord4;
+		out vec4 vTexCoord5;
 
 		void main()
 		{
@@ -2668,36 +2705,54 @@ namespace OGL_Renderer
 			// calculate window-space point size
 			gl_PointSize = pointRadius * (pointScale / gl_Position.w);
 
-			gl_TexCoord[0] = gl_MultiTexCoord0;
-			gl_TexCoord[1] = vec4(worldPos, gl_Vertex.w);
-			gl_TexCoord[2] = eyePos;
+			vTexCoord0 = gl_MultiTexCoord0;
+			vTexCoord1 = vec4(worldPos, gl_Vertex.w);
+			vTexCoord2 = eyePos;
 
-			gl_TexCoord[3].xyz = gl_ModelViewMatrix * vec4(gl_MultiTexCoord1.xyz, 0.0);
-			gl_TexCoord[4].xyzw = color;
+			vTexCoord3.xyz = (gl_ModelViewMatrix * vec4(gl_MultiTexCoord1.xyz, 0.0)).xyz;
+			vTexCoord3.w = gl_MultiTexCoord1.w;
+			vTexCoord4.xyzw = color;
 
 			// hack to color different emitters
 			if (gl_MultiTexCoord1.w == 2.0)
-				gl_TexCoord[4].xyzw = vec4(0.85, 0.65, 0.65, color.w);
+				vTexCoord4.xyzw = vec4(0.85, 0.65, 0.65, color.w);
 			else if (gl_MultiTexCoord1.w == 1.0)
-				gl_TexCoord[4].xyzw = vec4(0.65, 0.85, 0.65, color.w);
+				vTexCoord4.xyzw = vec4(0.65, 0.85, 0.65, color.w);
 
 			// compute ndc pos for frustrum culling in GS
 			vec4 ndcPos = gl_ModelViewProjectionMatrix * vec4(worldPos.xyz, 1.0);
-			gl_TexCoord[5] = ndcPos / ndcPos.w;
+			vTexCoord5 = ndcPos / ndcPos.w;
 		});
 
 	const char *geometryDiffuseShader =
-		"#version 120\n"
-		"#extension GL_EXT_geometry_shader4 : enable\n" STRINGIFY(
+		"#version 150 compatibility\n"
+		"layout(points) in;\n"
+		"layout(triangle_strip, max_vertices = 4) out;\n" STRINGIFY(
 
 			uniform float pointScale; // point size in world space
 			uniform float motionBlurScale;
 			uniform float diffusion;
 			uniform vec3 lightDir;
 
+			// inputs from vertex shader
+			in vec4 vTexCoord0[];
+			in vec4 vTexCoord1[];
+			in vec4 vTexCoord2[];
+			in vec4 vTexCoord3[];
+			in vec4 vTexCoord4[];
+			in vec4 vTexCoord5[];
+
+			// outputs to fragment shader
+			out vec4 gTexCoord0;
+			out vec4 gTexCoord1;
+			out vec4 gTexCoord2;
+			out vec4 gTexCoord3;
+			out vec4 gTexCoord4;
+			out vec4 gTexCoord5;
+
 			void main()
 			{
-				vec4 ndcPos = gl_TexCoordIn[0][5];
+				vec4 ndcPos = vTexCoord5[0];
 
 				// frustrum culling
 				const float ndcBound = 1.0;
@@ -2712,15 +2767,15 @@ namespace OGL_Renderer
 
 				float velocityScale = 1.0;
 
-				vec3 v = gl_TexCoordIn[0][3].xyz * velocityScale;
-				vec3 p = gl_TexCoordIn[0][2].xyz;
+				vec3 v = vTexCoord3[0].xyz * velocityScale;
+				vec3 p = vTexCoord2[0].xyz;
 
 				// billboard in eye space
 				vec3 u = vec3(0.0, pointScale, 0.0);
 				vec3 l = vec3(pointScale, 0.0, 0.0);
 
 				// increase size based on life
-				float lifeFade = mix(1.0f + diffusion, 1.0, min(1.0, gl_TexCoordIn[0][1].w * 0.25f));
+				float lifeFade = mix(1.0f + diffusion, 1.0, min(1.0, vTexCoord1[0].w * 0.25f));
 				u *= lifeFade;
 				l *= lifeFade;
 
@@ -2739,39 +2794,39 @@ namespace OGL_Renderer
 				}
 
 				{
-					gl_TexCoord[1] = gl_TexCoordIn[0][1]; // vertex world pos (life in w)
-					gl_TexCoord[2] = gl_TexCoordIn[0][2]; // vertex eye pos
-					gl_TexCoord[3] = gl_TexCoordIn[0][3]; // vertex velocity in view space
-					gl_TexCoord[3].w = fade;
-					gl_TexCoord[4] = gl_ModelViewMatrix * vec4(lightDir, 0.0);
-					gl_TexCoord[4].w = gl_TexCoordIn[0][3].w;		// attenuation
-					gl_TexCoord[5].xyzw = gl_TexCoordIn[0][4].xyzw; // color
+					gTexCoord1 = vTexCoord1[0]; // vertex world pos (life in w)
+					gTexCoord2 = vTexCoord2[0]; // vertex eye pos
+					gTexCoord3 = vTexCoord3[0]; // vertex velocity in view space
+					gTexCoord3.w = fade;
+					gTexCoord4 = gl_ModelViewMatrix * vec4(lightDir, 0.0);
+					gTexCoord4.w = vTexCoord3[0].w;		// attenuation
+					gTexCoord5.xyzw = vTexCoord4[0].xyzw; // color
 
 					float zbias = 0.0f; //0.00125*2.0;
 
-					gl_TexCoord[0] = vec4(0.0, 1.0, 0.0, 0.0);
+					gTexCoord0 = vec4(0.0, 1.0, 0.0, 0.0);
 					gl_Position = gl_ProjectionMatrix * vec4(p + u - l, 1.0);
 					gl_Position.z -= zbias;
 					EmitVertex();
 
-					gl_TexCoord[0] = vec4(0.0, 0.0, 0.0, 0.0);
+					gTexCoord0 = vec4(0.0, 0.0, 0.0, 0.0);
 					gl_Position = gl_ProjectionMatrix * vec4(p - u - l, 1.0);
 					gl_Position.z -= zbias;
 					EmitVertex();
 
-					gl_TexCoord[0] = vec4(1.0, 1.0, 0.0, 0.0);
+					gTexCoord0 = vec4(1.0, 1.0, 0.0, 0.0);
 					gl_Position = gl_ProjectionMatrix * vec4(p + u + l, 1.0);
 					gl_Position.z -= zbias;
 					EmitVertex();
 
-					gl_TexCoord[0] = vec4(1.0, 0.0, 0.0, 0.0);
+					gTexCoord0 = vec4(1.0, 0.0, 0.0, 0.0);
 					gl_Position = gl_ProjectionMatrix * vec4(p - u + l, 1.0);
 					gl_Position.z -= zbias;
 					EmitVertex();
 				}
 			});
 
-	const char *fragmentDiffuseShader = STRINGIFY(
+	const char *fragmentDiffuseShader = "#version 150 compatibility\n" STRINGIFY(
 
 		float sqr(float x) { return x * x; } float cube(float x) { return x * x * x; }
 
@@ -2790,20 +2845,28 @@ namespace OGL_Renderer
 		uniform float inscatterCoefficient;
 		uniform float outscatterCoefficient;
 
+		// inputs from geometry shader
+		in vec4 gTexCoord0;
+		in vec4 gTexCoord1;
+		in vec4 gTexCoord2;
+		in vec4 gTexCoord3;
+		in vec4 gTexCoord4;
+		in vec4 gTexCoord5;
+
 		void main()
 		{
-			float attenuation = gl_TexCoord[4].w;
-			float lifeFade = min(1.0, gl_TexCoord[1].w * 0.125);
+			float attenuation = gTexCoord4.w;
+			float lifeFade = min(1.0, gTexCoord1.w * 0.125);
 
 			// calculate normal from texture coordinates
 			vec3 normal;
-			normal.xy = gl_TexCoord[0].xy * vec2(2.0, 2.0) + vec2(-1.0, -1.0);
+			normal.xy = gTexCoord0.xy * vec2(2.0, 2.0) + vec2(-1.0, -1.0);
 			float mag = dot(normal.xy, normal.xy);
 			if (mag > 1.0)
 				discard; // kill pixels outside circle
 			normal.z = 1.0 - mag;
 
-			float velocityFade = gl_TexCoord[3].w;
+			float velocityFade = gTexCoord3.w;
 			float alpha = lifeFade * velocityFade * sqr(normal.z);
 
 			gl_FragColor = alpha;
