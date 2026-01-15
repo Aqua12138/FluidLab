@@ -237,7 +237,7 @@ def keyboard_control(env, cfg=None):
                     init_p = np.concatenate([init_pos_xyz, euler])
                 else:
                     # For 3D action, just use position
-                init_p = effector.init_pos
+                    init_p = effector.init_pos
 
     # Fallback: use default position based on action dimension
     if init_p is None:
