@@ -28,7 +28,6 @@ class TaichiEnv:
             horizon=100,
             ckpt_dest='disk',
             gravity=(0.0, -10.0, 0.0),
-            batch_size=1,
         ):
         self.particle_density    = particle_density
         self.dim                 = dim
@@ -36,7 +35,6 @@ class TaichiEnv:
         self.max_substeps_global = max_substeps_global
         self.horizon             = horizon
         self.ckpt_dest           = ckpt_dest
-        self.batch_size          = batch_size
         self.t                   = 0
 
         # env components
@@ -48,7 +46,6 @@ class TaichiEnv:
             max_substeps_global = self.max_substeps_global,
             gravity             = gravity,
             ckpt_dest           = ckpt_dest,
-            batch_size          = batch_size,
         )
         self.agent           = None
         self.statics         = Statics()
@@ -65,7 +62,6 @@ class TaichiEnv:
             max_substeps_global=self.max_substeps_global,
             max_action_steps_global=self.horizon,
             ckpt_dest=self.ckpt_dest,
-            batch_size=self.batch_size,
             **agent_cfg.get('params', {}),
         )
         for effector_cfg_dict in agent_cfg.effectors:
@@ -165,38 +161,13 @@ class TaichiEnv:
         assert self.renderer is not None, 'No renderer available.'
         return self.renderer.render_frame(mode, tgt_particles, self.t)
 
-    def get_state_RL(self, batch_id=None):
-        """
-        Get RL state for a specific batch or all batches.
-        If batch_id is None and batch_size=1, returns single state (backward compatible).
-        If batch_id is None and batch_size>1, returns dict with batch states.
-        If batch_id is specified, returns state for that batch only.
-        """
-        if batch_id is None and self.batch_size == 1:
-            return self.simulator.get_state_RL(batch_id=0)
-        elif batch_id is not None:
-            return self.simulator.get_state_RL(batch_id=batch_id)
-        else:
-            # All batch states
-            states = {}
-            for b in range(self.batch_size):
-                states[b] = self.simulator.get_state_RL(batch_id=b)
-            return states
+    def get_state_RL(self):
+        return self.simulator.get_state_RL()
 
     def step(self, action=None):
-        """
-        Step the environment forward.
-        If batch_size=1, action can be 1D array (backward compatible) or 2D array (1, action_dim).
-        If batch_size>1, action must be 2D array (batch_size, action_dim).
-        """
         if action is not None:
             assert self.agent is not None, 'Environment has no agent to execute action.'
             action = np.array(action).astype(DTYPE_NP)
-            # Handle backward compatibility: if batch_size=1 and action is 1D, expand to 2D
-            if self.batch_size == 1 and action.ndim == 1:
-                action = action.reshape(1, -1)
-            # Now action should be (batch_size, action_dim)
-            assert action.shape[0] == self.batch_size, f"Action batch size {action.shape[0]} doesn't match env batch_size {self.batch_size}"
         self.simulator.step(action=action)
 
         if self.loss:
@@ -211,10 +182,6 @@ class TaichiEnv:
         if action is not None:
             assert self.agent is not None, 'Environment has no agent to execute action.'
             action = np.array(action).astype(DTYPE_NP)
-            # Handle backward compatibility: if batch_size=1 and action is 1D, expand to 2D
-            if self.batch_size == 1 and action.ndim == 1:
-                action = action.reshape(1, -1)
-            assert action.shape[0] == self.batch_size, f"Action batch size {action.shape[0]} doesn't match env batch_size {self.batch_size}"
         self.simulator.step_grad(action=action)
 
     def get_step_loss(self):
@@ -229,34 +196,17 @@ class TaichiEnv:
         assert self.loss is not None
         self.loss.get_final_loss_grad()
 
-    def get_state(self, batch_id=None):
-        """
-        Get state for a specific batch or all batches.
-        If batch_id is None and batch_size=1, returns single state (backward compatible).
-        If batch_id is None and batch_size>1, returns dict with batch states.
-        If batch_id is specified, returns state for that batch only.
-        """
-        state = self.simulator.get_state(batch_id=batch_id)
+    def get_state(self):
         return {
-            'state': state,
+            'state': self.simulator.get_state(),
             'grad_enabled': self.grad_enabled
         }
 
-    def set_state(self, state, grad_enabled=False, batch_id=None):
-        """
-        Set state for a specific batch or all batches.
-        If batch_id is None and batch_size=1, expects single state (backward compatible).
-        If batch_id is None and batch_size>1, expects dict with batch states.
-        If batch_id is specified, sets state for that batch only.
-        """
+    def set_state(self, state, grad_enabled=False):
         self.t = 0
 
         self.simulator.cur_substep_global = 0
-        if isinstance(state, dict) and 'state' in state:
-            # Handle wrapped state dict
-            self.simulator.set_state(0, state['state'], batch_id=batch_id)
-        else:
-            self.simulator.set_state(0, state, batch_id=batch_id)
+        self.simulator.set_state(0, state)
 
         if grad_enabled:
             self.enable_grad()

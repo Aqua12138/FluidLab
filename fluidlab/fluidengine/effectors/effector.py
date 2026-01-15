@@ -24,14 +24,12 @@ class Effector:
         action_scale_v=(1.0, 1.0, 1.0),
         init_pos=(0.5, 0.5, 0.5),
         init_euler=(0.0, 0.0, 0.0),
-        batch_size=1,
     ):
         self.dim = dim
         self.max_substeps_local = max_substeps_local # this is f
         self.max_substeps_global = max_substeps_global # this is f
         self.max_action_steps_global = max_action_steps_global # this is s, not f
         self.ckpt_dest = ckpt_dest
-        self.batch_size = batch_size
 
         self.pos = ti.Vector.field(3, DTYPE_TI, needs_grad=True) # positon of the effector
         self.quat = ti.Vector.field(4, DTYPE_TI, needs_grad=True) # quaternion for storing rotation
@@ -39,8 +37,7 @@ class Effector:
         self.v = ti.Vector.field(3, DTYPE_TI, needs_grad=True) # velocity
         self.w = ti.Vector.field(3, DTYPE_TI, needs_grad=True) # angular velocity
 
-        # Add batch dimension to fields
-        ti.root.dense(ti.ij, (self.batch_size, self.max_substeps_local+1)).place(self.pos, self.pos.grad, self.quat, self.quat.grad,
+        ti.root.dense(ti.i, (self.max_substeps_local+1,)).place(self.pos, self.pos.grad, self.quat, self.quat.grad,
                                                                        self.v, self.v.grad, self.w, self.w.grad)
 
         self.action_dim = action_dim
@@ -84,26 +81,26 @@ class Effector:
         self.action_buffer_p.grad.fill(0)
 
     @ti.kernel
-    def get_ckpt_kernel(self, batch_id: ti.i32, pos_np: ti.types.ndarray(), quat_np: ti.types.ndarray(), v_np: ti.types.ndarray(), w_np: ti.types.ndarray()):
+    def get_ckpt_kernel(self, pos_np: ti.types.ndarray(), quat_np: ti.types.ndarray(), v_np: ti.types.ndarray(), w_np: ti.types.ndarray()):
         for i in ti.static(range(3)):
-            pos_np[i] = self.pos[batch_id, 0][i]
-            v_np[i] = self.v[batch_id, 0][i]
-            w_np[i] = self.w[batch_id, 0][i]
+            pos_np[i] = self.pos[0][i]
+            v_np[i] = self.v[0][i]
+            w_np[i] = self.w[0][i]
 
         for i in ti.static(range(4)):
-            quat_np[i] = self.quat[batch_id, 0][i]
+            quat_np[i] = self.quat[0][i]
 
     @ti.kernel
-    def set_ckpt_kernel(self, batch_id: ti.i32, pos_np: ti.types.ndarray(), quat_np: ti.types.ndarray(), v_np: ti.types.ndarray(), w_np: ti.types.ndarray()):
+    def set_ckpt_kernel(self, pos_np: ti.types.ndarray(), quat_np: ti.types.ndarray(), v_np: ti.types.ndarray(), w_np: ti.types.ndarray()):
         for i in ti.static(range(3)):
-            self.pos[batch_id, 0][i] = pos_np[i]
-            self.v[batch_id, 0][i] = v_np[i]
-            self.w[batch_id, 0][i] = w_np[i]
+            self.pos[0][i] = pos_np[i]
+            self.v[0][i] = v_np[i]
+            self.w[0][i] = w_np[i]
 
         for i in ti.static(range(4)):
-            self.quat[batch_id, 0][i] = quat_np[i]
+            self.quat[0][i] = quat_np[i]
 
-    def get_ckpt(self, batch_id=0, ckpt_name=None):
+    def get_ckpt(self, ckpt_name=None):
         if self.ckpt_dest == 'disk':
             ckpt = {
                 'pos'  : self.pos_np,
@@ -111,7 +108,7 @@ class Effector:
                 'v'    : self.v_np,
                 'w'    : self.w_np,
             }
-            self.get_ckpt_kernel(batch_id, self.pos_np, self.quat_np, self.v_np, self.w_np)
+            self.get_ckpt_kernel(self.pos_np, self.quat_np, self.v_np, self.w_np)
             return ckpt
 
         elif self.ckpt_dest in ['cpu', 'gpu']:
@@ -121,99 +118,94 @@ class Effector:
                 elif self.ckpt_dest == 'gpu':
                     device = 'cuda'
                 self.ckpt_ram[ckpt_name] = {
-                    'pos': torch.zeros((self.batch_size, 3), dtype=DTYPE_TC, device=device),
-                    'quat': torch.zeros((self.batch_size, 4), dtype=DTYPE_TC, device=device),
-                    'v': torch.zeros((self.batch_size, 3), dtype=DTYPE_TC, device=device),
-                    'w': torch.zeros((self.batch_size, 3), dtype=DTYPE_TC, device=device),
+                    'pos': torch.zeros((3), dtype=DTYPE_TC, device=device),
+                    'quat': torch.zeros((4), dtype=DTYPE_TC, device=device),
+                    'v': torch.zeros((3), dtype=DTYPE_TC, device=device),
+                    'w': torch.zeros((3), dtype=DTYPE_TC, device=device),
                 }
             self.get_ckpt_kernel(
-                batch_id,
-                self.ckpt_ram[ckpt_name]['pos'][batch_id],
-                self.ckpt_ram[ckpt_name]['quat'][batch_id],
-                self.ckpt_ram[ckpt_name]['v'][batch_id],
-                self.ckpt_ram[ckpt_name]['w'][batch_id],
+                self.ckpt_ram[ckpt_name]['pos'],
+                self.ckpt_ram[ckpt_name]['quat'],
+                self.ckpt_ram[ckpt_name]['v'],
+                self.ckpt_ram[ckpt_name]['w'],
             )
 
-    def set_ckpt(self, batch_id=0, ckpt=None, ckpt_name=None):
+    def set_ckpt(self, ckpt=None, ckpt_name=None):
         if self.ckpt_dest == 'disk':
             assert ckpt is not None
-            # Handle backward compatibility: single batch without batch dimension
-            if isinstance(ckpt['pos'], np.ndarray) and len(ckpt['pos'].shape) == 1:
-                self.set_ckpt_kernel(batch_id, ckpt['pos'], ckpt['quat'], ckpt['v'], ckpt['w'])
-            else:
-                self.set_ckpt_kernel(batch_id, ckpt['pos'][batch_id], ckpt['quat'][batch_id], ckpt['v'][batch_id], ckpt['w'][batch_id])
 
         elif self.ckpt_dest in ['cpu', 'gpu']:
             ckpt = self.ckpt_ram[ckpt_name]
-            self.set_ckpt_kernel(batch_id, ckpt['pos'][batch_id], ckpt['quat'][batch_id], ckpt['v'][batch_id], ckpt['w'][batch_id])
+
+        self.set_ckpt_kernel(ckpt['pos'], ckpt['quat'], ckpt['v'], ckpt['w'])
 
     @ti.func
     def act(self):
         raise NotImplementedError
 
-    def move(self, batch_id, f):
-        self.move_kernel(batch_id, f)
-        self.update_latest_pos(batch_id, f)
+    def move(self, f):
+        self.move_kernel(f)
+        self.update_latest_pos(f)
 
     @ti.kernel
-    def update_latest_pos(self, batch_id: ti.i32, f: ti.i32):
-        self.latest_pos[0] = ti.cast(self.pos[batch_id, f], ti.f32)
+    def update_latest_pos(self, f: ti.i32):
+        self.latest_pos[0] = ti.cast(self.pos[f], ti.f32)
 
-    def move_grad(self, batch_id, f):
-        self.move_kernel.grad(batch_id, f)
+    def move_grad(self, f):
+        self.move_kernel.grad(f)
         
     @ti.kernel
-    def move_kernel(self, batch_id: ti.i32, f: ti.i32):
-        self.pos[batch_id, f+1] = self.boundary.impose_x(self.pos[batch_id, f] + self.v[batch_id, f])
+    def move_kernel(self, f: ti.i32):
+        self.pos[f+1] = self.boundary.impose_x(self.pos[f] + self.v[f])
         # rotate in world coordinates about itself.
-        self.quat[batch_id, f+1] = qmul(w2quat(self.w[batch_id, f], DTYPE_TI), self.quat[batch_id, f])
+        self.quat[f+1] = qmul(w2quat(self.w[f], DTYPE_TI), self.quat[f])
 
     # state set and copy ...
     @ti.func
-    def copy_frame(self, batch_id, source, target):
-        self.pos[batch_id, target] = self.pos[batch_id, source]
-        self.quat[batch_id, target] = self.quat[batch_id, source]
-        self.v[batch_id, target] = self.v[batch_id, source]
-        self.w[batch_id, target] = self.w[batch_id, source]
+    def copy_frame(self, source, target):
+        self.pos[target] = self.pos[source]
+        self.quat[target] = self.quat[source]
+        self.v[target] = self.v[source]
+        self.w[target] = self.w[source]
 
     @ti.func
-    def copy_grad(self, batch_id, source, target):
-        self.pos.grad[batch_id, target] = self.pos.grad[batch_id, source]
-        self.quat.grad[batch_id, target] = self.quat.grad[batch_id, source]
-        self.v.grad[batch_id, target] = self.v.grad[batch_id, source]
-        self.w.grad[batch_id, target] = self.w.grad[batch_id, source]
+    def copy_grad(self, source, target):
+        self.pos.grad[target] = self.pos.grad[source]
+        self.quat.grad[target] = self.quat.grad[source]
+        self.v.grad[target] = self.v.grad[source]
+        self.w.grad[target] = self.w.grad[source]
 
     @ti.func
-    def reset_grad_till_frame(self, batch_id, f):
+    def reset_grad_till_frame(self, f):
         for i in range(f):
-            self.pos.grad[batch_id, i].fill(0)
-            self.quat.grad[batch_id, i].fill(0)
-            self.v.grad[batch_id, i].fill(0)
-            self.w.grad[batch_id, i].fill(0)
+            self.pos.grad[i].fill(0)
+            self.quat.grad[i].fill(0)
+            self.v.grad[i].fill(0)
+            self.w.grad[i].fill(0)
 
     @ti.kernel
-    def get_state_kernel(self, batch_id: ti.i32, f: ti.i32, controller: ti.types.ndarray()):
+    def get_state_kernel(self, f: ti.i32, controller: ti.types.ndarray()):
         for j in ti.static(range(3)):
-            controller[j] = self.pos[batch_id, f][j]
+            controller[j] = self.pos[f][j]
         for j in ti.static(range(4)):
-            controller[j+self.dim] = self.quat[batch_id, f][j]
+            controller[j+self.dim] = self.quat[f][j]
 
     @ti.kernel
-    def set_state_kernel(self, batch_id: ti.i32, f: ti.i32, controller: ti.types.ndarray()):
+    def set_state_kernel(self, f: ti.i32, controller: ti.types.ndarray()):
         for j in ti.static(range(3)):
-            self.pos[batch_id, f][j] = controller[j]
+            self.pos[f][j] = controller[j]
         for j in ti.static(range(4)):
-            self.quat[batch_id, f][j] = controller[j+self.dim]
+            self.quat[f][j] = controller[j+self.dim]
 
-    def get_state(self, batch_id, f):
+    def get_state(self, f):
         out = np.zeros((7), dtype=DTYPE_NP)
-        self.get_state_kernel(batch_id, f, out)
+        self.get_state_kernel(f, out)
         return out
 
-    def set_state(self, batch_id, f, state):
-        ss = self.get_state(batch_id, f)
+    def set_state(self, f, state):
+        ss = self.get_state(f)
         ss[:len(state)] = state
-        self.set_state_kernel(batch_id, f, ss)
+        self.set_state_kernel(f, ss)
 
 
     @property
@@ -221,9 +213,7 @@ class Effector:
         return np.append(self.init_pos, self.init_rot)
 
     def build(self):
-        # Initialize all batches with the same initial state
-        for b in range(self.batch_size):
-            self.set_state(b, 0, self.init_state)
+        self.set_state(0, self.init_state)
 
     @ti.kernel
     def set_action_kernel(self, s_global: ti.i32, action: ti.types.ndarray()):
@@ -260,28 +250,28 @@ class Effector:
             grad[n, j] = self.action_buffer_p.grad[None][j]
 
     @ti.kernel
-    def set_velocity(self, batch_id: ti.i32, s: ti.i32, s_global: ti.i32, n_substeps: ti.i32):
+    def set_velocity(self, s: ti.i32, s_global: ti.i32, n_substeps: ti.i32):
         for j in range(s*n_substeps, (s+1)*n_substeps):
             n_substeps_f = ti.cast(n_substeps, DTYPE_TI)
             for k in ti.static(range(3)):
-                self.v[batch_id, j][k] = self.action_buffer[s_global][k] * self.action_scale[None][k]/n_substeps_f
+                self.v[j][k] = self.action_buffer[s_global][k] * self.action_scale[None][k]/n_substeps_f
             if ti.static(self.action_dim>3):
                 for k in ti.static(range(3)):
-                    self.w[batch_id, j][k] = self.action_buffer[s_global][k+3] * self.action_scale[None][k+3]/n_substeps_f
+                    self.w[j][k] = self.action_buffer[s_global][k+3] * self.action_scale[None][k+3]/n_substeps_f
 
-    def set_action(self, batch_id, s, s_global, n_substeps, action):
+    def set_action(self, s, s_global, n_substeps, action):
         assert s_global <= self.max_action_steps_global
         assert s * n_substeps <= self.max_substeps_local
         # set actions for n_substeps ...
         if self.action_dim > 0:
             self.set_action_kernel(s_global, action)
-            self.set_velocity(batch_id, s, s_global, n_substeps)
+            self.set_velocity(s, s_global, n_substeps)
 
-    def set_action_grad(self, batch_id, s, s_global, n_substeps, action):
+    def set_action_grad(self, s, s_global, n_substeps, action):
         assert s_global <= self.max_action_steps_global
         assert s * n_substeps <= self.max_substeps_local
         if self.action_dim > 0:
-            self.set_velocity.grad(batch_id, s, s_global, n_substeps)
+            self.set_velocity.grad(s, s_global, n_substeps)
 
     def get_action_grad(self, s, n):
         if self.action_dim > 0:

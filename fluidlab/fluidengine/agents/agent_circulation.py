@@ -18,5 +18,5 @@ class AgentCirculation(Agent):
         self.aircon = self.effectors[0]
 
     @ti.func
-    def collide(self, batch_id, f, pos_world, mat_v, dt):
+    def collide(self, f, pos_world, mat_v, dt):
         return mat_v

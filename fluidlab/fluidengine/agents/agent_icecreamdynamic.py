@@ -22,28 +22,28 @@ class AgentIceCreamDynamic(Agent):
 
         self.injector.set_act_range(self.sim.particles_ng.used.to_numpy()[0])
 
-    def act(self, batch_id, f, f_global):
+    def act(self, f, f_global):
         if f_global < self.inject_till:
-            self.act_kernel(batch_id, f, f_global)
-            self.check_act_range(batch_id, f)
+            self.act_kernel(f, f_global)
+            self.check_act_range(f)
 
-    def act_grad(self, batch_id, f, f_global):
+    def act_grad(self, f, f_global):
         if f_global < self.inject_till:
-            self.act_kernel.grad(batch_id, f, f_global)
+            self.act_kernel.grad(f, f_global)
 
     @ti.kernel
-    def act_kernel(self, batch_id: ti.i32, f: ti.i32, f_global: ti.i32):
-        self.injector.act(batch_id, f, f_global, self.sim.particles_ng, self.sim.particles)
+    def act_kernel(self, f: ti.i32, f_global: ti.i32):
+        self.injector.act(f, f_global, self.sim.particles_ng.used, self.sim.particles.x, self.sim.particles.v)
 
     @ti.func
-    def collide(self, batch_id, f, pos_world, mat_v, dt):
+    def collide(self, f, pos_world, mat_v, dt):
         ret_v = mat_v
         if pos_world[1] > 0.25:
-            ret_v = self.rigid.collide(batch_id, f, pos_world, mat_v, dt)
+            ret_v = self.rigid.collide(f, pos_world, mat_v, dt)
         return ret_v
 
-    def check_act_range(self, batch_id, f):
-        assert self.injector.act_id[batch_id, f+1] <= self.injector.act_range.shape[0], 'too many particles added'
+    def check_act_range(self, f):
+        assert self.injector.act_id[f+1] <= self.injector.act_range.shape[0], 'too many particles added'
             
     @property
     def action_dim(self):
@@ -53,15 +53,15 @@ class AgentIceCreamDynamic(Agent):
     def state_dim(self):
         return self.rigid.state_dim
 
-    def set_action(self, batch_id, s, s_global, n_substeps, action):
+    def set_action(self, s, s_global, n_substeps, action):
         action = np.asarray(action).reshape(-1).clip(-1, 1)
         assert len(action) == self.rigid.action_dim
-        self.rigid.set_action(batch_id, s, s_global, n_substeps, action)
+        self.rigid.set_action(s, s_global, n_substeps, action)
 
-    def set_action_grad(self, batch_id, s, s_global, n_substeps, action):
+    def set_action_grad(self, s, s_global, n_substeps, action):
         action = np.asarray(action).reshape(-1).clip(-1, 1)
         assert len(action) == self.rigid.action_dim
-        self.rigid.set_action_grad(batch_id, s, s_global, n_substeps, action)
+        self.rigid.set_action_grad(s, s_global, n_substeps, action)
 
     def apply_action_p(self, action_p):
         action_p = np.asarray(action_p).reshape(-1).clip(0.05, 0.95)
@@ -75,9 +75,9 @@ class AgentIceCreamDynamic(Agent):
         grad = self.rigid.get_action_grad(0, n)
         return grad
 
-    def move(self, batch_id, f):
+    def move(self, f):
         for i in range(self.n_effectors):
-            self.effectors[i].move(batch_id, f)
+            self.effectors[i].move(f)
 
-    def move_grad(self, batch_id, f):
-        self.rigid.move_grad(batch_id, f)
+    def move_grad(self, f):
+        self.rigid.move_grad(f)
