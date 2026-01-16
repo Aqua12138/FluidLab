@@ -1,0 +1,38 @@
+# SHAC 配置 - TableMaterials 环境
+
+seed: 42
+
+optimizer:
+  type: Adam
+  lr: 0.001
+  beta_1: 0.9
+  beta_2: 0.999
+  epsilon: 1.0e-8
+
+training:
+  n_iters: 200
+  horizon: 100
+  batch_size: 1
+  grad_clip: 1.0
+
+policy:
+  type: MLP
+  hidden_layers: [256, 256]
+  activation: elu
+  output_activation: tanh
+
+init_range:
+  p: [[0.5, 0.5, 0.5], [0.5, 0.5, 0.5]]
+  v: [[-0.01, -0.01, -0.01, -0.01, -0.01, -0.01], 
+      [0.01, 0.01, 0.01, 0.01, 0.01, 0.01]]
+
+sampler:
+  type: uniform
+  trainable: [0, 1, 2, 3, 4, 5]
+  fix_dim: []
+
+logging:
+  log_interval: 10
+  save_interval: 50
+  video_interval: 50
+

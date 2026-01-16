@@ -1,132 +1,124 @@
+# RheoAgent：Herschel-Bulkley 非牛顿流体材料演示与可微分 MPM
 
-# FluidLab: A Differentiable Environment for Benchmarking Complex Fluid Manipulation
+本项目基于 Material Point Method (MPM) 实现流体仿真，并提供 **Herschel-Bulkley (HB)** 非牛顿材料模型（支持屈服应力、剪切变稀/增稠），用于演示与强化学习/差分优化实验。
 
-<p align="left">
-    <a href='https://arxiv.org/abs/2303.02346'>
-      <img src='https://img.shields.io/badge/Paper-arXiv-green?style=plastic&logo=arXiv&logoColor=green' alt='Paper arXiv'>
-    </a>
-    <a href='https://fluidlab2023.github.io/'>
-      <img src='https://img.shields.io/badge/Project-Page-blue?style=plastic&logo=Google%20chrome&logoColor=blue' alt='Project Page'>
-    </a>
-</p>
+<div align="center">
 
-This is the official repo of the paper:
+| Water (牛顿流体) | Honey (剪切变稀) | Blood (弱屈服) |
+|:---:|:---:|:---:|
+| <img src="gif/water.gif" width="250"/> | <img src="gif/honey.gif" width="250"/> | <img src="gif/blood.gif" width="250"/> |
 
-> **[FluidLab: A Differentiable Environment for Benchmarking Complex Fluid Manipulation](https://fluidlab2023.github.io/)**  
-> [Zhou Xian](https://zhou-xian.com/), [Bo Zhu](https://www.cs.dartmouth.edu/~bozhu/), [Zhenjia Xu](https://www.zhenjiaxu.com/), [Hsiao-Yu Tung](https://sfish0101.bitbucket.io/), [Antonio Torralba](https://groups.csail.mit.edu/vision/torralbalab/), [Katerina Fragkiadaki](https://www.cs.cmu.edu/~katef/), [Chuang Gan](https://people.csail.mit.edu/ganchuang/)   
-> *ICLR 2023 (Spotlight)*
+| Cornstarch (剪切增稠) | Yogurt (屈服+变稀) | 更多材料敬请期待 |
+|:---:|:---:|:---:|
+| <img src="gif/cornstarch.gif" width="250"/> | <img src="gif/yogurt.gif" width="250"/> | 🚧 Coming Soon 🚧 |
 
-![](tasks.gif)
+</div>
 
-This codebase contains the following:
-- **FluidEngine**, a multi-material fully-differentiable physics engine, supporting liquids, solids, and gasesous fluid simulation.
-- **FluidLab**, a set of standardized complex (robotic) fluid manipulation tasks powered by FluidEngine.
+## 安装
 
-## Table of Contents
-- [Installation](#installation)
-  - [Basic environment](#basic-environment)
-  - [Rendering](#rendering)
-- [Let's Rock!](#lets-rock)
-  - [Generate goal](#generate-goal)
-  - [Solve](#trajectory-optimization-with-differentiable-physics)
-  - [Replay](#replay-optimized-trajectory)
-## Installation
-### Basic environment
-Clone git repo.
-```
-git clone https://github.com/zhouxian/FluidLab.git
-```
-We recommend working with a conda environment.
-```
-cd FluidLab/
+推荐使用仓库自带的 `environment.yml`（如需自行管理环境，也可直接 pip 安装）。
+
+```bash
+# 1) 创建并激活环境（推荐）
 conda env create -f environment.yml
-conda activate fluidlab
-```
-If installing from this yaml file doesn't work, manual installation missing packages should also work.
+conda activate rheo
 
-Finally, install FluidLab.
-```
+# 2) 以可编辑模式安装
 pip install -e .
+
+# 3) 可选：安装 RL 依赖（PPO 使用 skrl）
+pip install -e ".[rl]"
+
+# 4) 安装键盘控制依赖
+pip install pynput
 ```
 
-### Rendering
-FluidLab comes with two different rendering choices: GGUIRenderer and GLRenderer.
+## 运行方式
 
-#### 1. GGUIRenderer
-GGUIRenderer (`fluidlab/fluidengine/renderers/ggui_renderer.py`) is based on Taichi's own UI system: [GGUI](https://docs.taichi-lang.org/docs/ggui).
-GGUIRenderer is fast and the recommended way for quick visualization and prototyping.
+### 键盘控制（pynput 全局监听，支持长按）
 
-#### 2. GLRenderer
-GLRenderer (`fluidlab/fluidengine/renderers/ggui_renderer.py`) is an OpenGL-based GPU-acelerated rendering pipeline. It produces much better visual effects.
+```bash
+# Pouring 环境
+python script/keyboard.py --task Pouring-v0 --num_envs 1
 
-GLRenderer is slower than GGUIRenderer: while the rendering itself is pretty fast, the major bottleneck occurs in GPU-CPU-GPU data transfer from simulation to the renderer. We are currently working on addressing this.
+# 指定材料（示例：蜂蜜）
+python script/keyboard.py --task Pouring-v0 --num_envs 1 --material HONEY
 
-Part of GLRenderer is modified from Nvidia FleX’s rendering pipeline. We enhanced it with various features tailored to FluidLab's use, including particle-level colorization, headless rendering, dynamic object loading, volume rendering for smoke field, etc. We also provided a set of python APIs to dynamically update the scene configuration from within Python. The renderer supports rendering materials as either particles or fluids. 
-
-GLRenderer is developped in C++ and needs to be compiled first. Sadly, compiling only works with cuda 9.2, but we provided a docker file to make it easy.
-
-First, install docker-ce and nvidia-docker following the official steps:
-- https://docs.docker.com/engine/install/ubuntu/
-- https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html#docker
-
-Compile GLRenderer using our provided docker file. (Assuming you are using anaconda3)
-
-```
-sudo docker build -t fluidlab-glrenderer fluidlab/fluidengine/renderers/gl_renderer_src
-
-# make sure you replace {username} with your own
-sudo docker run \
-  -v ${PWD}/fluidlab/fluidengine/renderers/gl_renderer_src:/workspace \
-  -v /home/{username}/anaconda3:/home/{username}/anaconda3 \
-  --gpus all \
-  -e DISPLAY=$DISPLAY \
-  -e QT_X11_NO_MITSHM=1 \
-  -it fluidlab-glrenderer:latest bash
-
-. /home/{username}/anaconda3/bin/activate fluidlab
-. prepare.sh
-. compile.sh
-```
-If you see the following console output, the compilation is successful, and you are free to exit the docker environment.
-```
-[100%] Linking CXX shared module flex_renderer.cpython-37m-x86_64-linux-gnu.so
-[100%] Built target flex_renderer
+# TableMaterials 环境
+python script/keyboard.py --task TableMaterials-v0 --num_envs 1
 ```
 
-## Let's Rock!
-### Generate goal
-Let's start with the Latte Art (Pouring) task as a concrete example.
-First, we need to generate a goal pattern. We provided a hard-coded sinewave pattern by default:
-```
-python fluidlab/run.py --cfg_file configs/exp_latteart.yaml --record
-```
-A GUI window pops up and visualizes the pattern generation process. After this, the generated goal pattern will be saved as `fluidlab/assets/targets/LatteArt-v0.pkl`.
-The above command uses GGUIRenderer by default. If you want to switch to GLRenderer, simply append `--renderer_type GL` at the end:
-```
-python fluidlab/run.py --cfg_file configs/exp_latteart.yaml --record --renderer_type GL
-```
-Instead of using the hard-coded sinewave pattern, you can also generate the goal by controlling the agent using you mouse (and keyboard in other examples), simply by appending `--user_input`. It is recommended to switch back to GGUIRenderer in this case because speed matters for interactive control:
-```
-python fluidlab/run.py --cfg_file configs/exp_latteart.yaml --record --renderer_type GGUI --user_input
-```
-Now you can use your mouse to control the pitcher and generate a goal pattern you want.
+**键盘控制说明**：
+- `W/S`: X轴移动 (前/后)
+- `A/D`: Z轴移动 (左/右)
+- `Q/E`: Y轴移动 (上/下)
+- `I/K`: Roll 旋转
+- `J/L`: Pitch 旋转
+- `U/O`: Yaw 旋转
+- `R`: 重置环境
+- `ESC`: 退出
 
-Once a target is generated, you can replay it:
-```
-python fluidlab/run.py --cfg_file configs/exp_latteart.yaml --replay_target
+### PPO（skrl，无梯度）
+
+```bash
+python script/RL/ppo/train.py --task Pouring-v0 --num_envs 16
+python script/RL/ppo/play.py  --task Pouring-v0 --num_envs 1 --checkpoint <path-to-ckpt>
 ```
 
-### Trajectory optimization with differentiable physics
-Now that we have the goal, we will optimize a trajectory using gradients provided by the differentiable simulation.
-```
-python fluidlab/run.py --cfg_file configs/exp_latteart.yaml --exp_name exp_latteart
-```
-Optimized trajectories will be saved under ```logs/policies/{exp_name}```.
+### SHAC（差分物理，需要梯度）
 
-### Replay optimized trajectory
-```
-python fluidlab/run.py --cfg_file configs/exp_latteart.yaml --replay_policy --path logs/policies/exp_latteart/0100.pkl
+```bash
+python script/DiffRL/shac/train.py --task Pouring-v0 --grad --n_iters 200
+python script/DiffRL/shac/play.py  --task Pouring-v0 --checkpoint <path-to-ckpt>
 ```
 
-### Misc
-If you would like to use GLRenderer for liquid, remember to modify the opacity value of the corresponding material in `macro.py`. For example, the last element in `COLOR[WATER]` should be set to `0.0`.
+## Herschel-Bulkley 模型简介
+
+Herschel-Bulkley 模型用于描述非牛顿流体的等效粘度：
+
+$$\mu_{eff} = \left(\frac{\tau_y}{\dot{\gamma}}\right) + K \cdot \dot{\gamma}^{(n-1)}$$
+
+其中：
+- **τ_y**：屈服应力（小于该应力时更像固体）
+- **K**：稠度系数（基础粘度/稠度强度）
+- **n**：流动指数
+  - n = 1：牛顿流体（粘度恒定）
+  - n < 1：剪切变稀（剪切越快越"稀"）
+  - n > 1：剪切增稠（剪切越快越"稠"）
+- **ρ**：密度
+
+实现细节与数值稳定性策略（如屈服应力正则化、粘度上限、剪切率截断等）均在 `source/rheo/simulators/mpm_simulator.py` 中。
+
+## 材料参数（与代码一致）
+
+材料参数定义在 `source/rheo/macros.py`，下表为其中常用 HB 材料的参数：
+
+| 材料 | RHO | YIELD_STRESS (τ_y) | CONSISTENCY (K) | FLOW_INDEX (n) | 类型 |
+|------|-----|---------------------|-----------------|----------------|------|
+| WATER_NEWTON | 1.0 | 0.0 | 1.0 | 1.0 | 牛顿流体 |
+| HONEY | 1.4 | 0.0 | 2000.0 | 0.5 | 剪切变稀 |
+| BLOOD | 1.05 | 5.0 | 50.0 | 0.7 | 弱剪切变稀 + 轻微屈服 |
+| CORNSTARCH | 1.1 | 0.0 | 100.0 | 1.5 | 剪切增稠 |
+| YOGURT | 1.05 | 12.0 | 400.0 | 0.6 | 剪切变稀 + 屈服 |
+| KETCHUP | 1.1 | 20.0 | 200.0 | 0.3 | 强剪切变稀 + 屈服 |
+| TOOTHPASTE | 1.2 | 100.0 | 1000.0 | 0.4 | 剪切变稀 + 强屈服 |
+
+## 代码与资源位置
+
+- **核心引擎**：`source/rheo/`
+- **环境实现**：`source/rheo_env/`（每个环境内含 `mdp/` 与 `agents/` 配置）
+- **资源文件**：`source/rheo_asset/`（如 `meshes/raw`、`meshes/processed`）
+- **脚本入口**：`script/`
+
+## 引用
+
+如果你使用了本项目的 Herschel-Bulkley/MPM 实现，请引用原始论文：
+
+```bibtex
+@inproceedings{haixu2026rheo,
+  title={RheoAgent: A Cross-Rheological Material Handling Robotic Manipulation System Based on Hierarchical Decision-Making Framework},
+  author={Haixu Zhang, Bo Zhang, Danyang Zhang, Xi Chen, Wenqiang Lai, Hongxue Huang, Chi Zhang, Hangxin Liu, Tin Lun Lam, Hu Huang, Yuan Gao},
+  booktitle={},
+  year={2026}
+}
+```

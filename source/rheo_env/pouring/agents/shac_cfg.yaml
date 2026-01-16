@@ -1,0 +1,45 @@
+# SHAC (Short-Horizon Actor-Critic) 配置 - Pouring 环境
+# 用于差分物理优化的配置
+
+seed: 42
+
+# 优化器配置
+optimizer:
+  type: Adam
+  lr: 0.001
+  beta_1: 0.9
+  beta_2: 0.999
+  epsilon: 1.0e-8
+
+# 训练配置
+training:
+  n_iters: 200
+  horizon: 100  # 短视野用于梯度计算
+  batch_size: 1
+  grad_clip: 1.0
+
+# 策略网络配置
+policy:
+  type: MLP
+  hidden_layers: [256, 256]
+  activation: elu
+  output_activation: tanh
+
+# 初始化范围
+init_range:
+  p: [[0.5, 0.75, 0.5], [0.5, 0.75, 0.5]]  # 位置范围
+  v: [[-0.02, -0.02, -0.02, -0.02, -0.02, -0.02], 
+      [0.02, 0.02, 0.02, 0.02, 0.02, 0.02]]  # 速度范围
+
+# 采样配置
+sampler:
+  type: uniform
+  trainable: [0, 1, 2, 3, 4, 5]  # 可训练的动作维度
+  fix_dim: []  # 固定的动作维度
+
+# 日志配置
+logging:
+  log_interval: 10
+  save_interval: 50
+  video_interval: 50
+
