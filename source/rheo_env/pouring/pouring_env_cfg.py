@@ -43,10 +43,10 @@ class PouringEnvCfg(RheoEnvCfg):
         collide_type="particle",
         effectors=[EffectorCfg(
             type="Rigid",
-            init_pos=(0.5, 0.75, 0.5),
+            init_pos=(0.5, 0.5, 0.5),
             init_euler=(0.0, 0.0, 0.0),
             action_dim=6,
-            action_scale_p=(1.0, 1.0, 1.0),
+            action_scale_p=(1.0, 1.0, 1.0, 1.0, 1.0, 1.0),
             action_scale_v=(1.0, 1.0, 1.0, 1.0, 1.0, 1.0),
             mesh_file="glass.obj",
             mesh_file_vis="glass_vis.obj",
@@ -65,7 +65,7 @@ class PouringEnvCfg(RheoEnvCfg):
         BodyCfg(
             type="cylinder",
             material="WATER",  # 将在运行时被 self.material 覆盖
-            center=(0.5, 0.55, 0.5),
+            center=(0.5, 0.7, 0.5),
             height=0.4,
             radius=0.07,
         )
@@ -102,8 +102,8 @@ class PouringEnvCfg(RheoEnvCfg):
     
     # 渲染器配置 (GL 渲染器)
     renderer: RendererCfg = field(default_factory=lambda: RendererCfg(
-        camera_pos=(-0.15, 2.82, 2.5),
-        camera_lookat=(0.5, 0.5, 0.5),
+        # camera_pos=(0.5, 0.8, 3.0),
+        # camera_lookat=(0.5, 0.3, 0.5),
         fov=30.0,
+        particle_radius=0.004,
     ))
-

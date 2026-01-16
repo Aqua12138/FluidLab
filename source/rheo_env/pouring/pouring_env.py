@@ -85,61 +85,93 @@ class PouringEnv(RheoEnvBase):
         self.agent = self.taichi_env.agent
     
     def setup_statics(self):
-        """设置静态物体 - 目标杯子和桌子"""
-        # 目标玻璃杯
-        self.taichi_env.add_static(
-            file='glass.obj',
-            file_vis='glass_vis.obj',
-            pos=(0.5, 0.15, 0.5),
-            euler=(0.0, 0.0, 0.0),
-            scale=(0.3, 0.3, 0.3),
-            material=BOTTLE,
-            has_dynamics=True,
-            sdf_res=256,
-        )
-        
-        # 桌子
-        self.taichi_env.add_static(
-            file='table.obj',
-            pos=(0.5, 0.0, 0.5),
-            euler=(0.0, 0.0, 0.0),
-            scale=(1, 1, 1),
-            material=TABLE,
-            has_dynamics=True,
-        )
+        """设置静态物体 - 从配置文件读取"""
+        for static_cfg in self.cfg.statics:
+            # 解析材料常量
+            material = static_cfg.material
+            if isinstance(material, str):
+                material = globals().get(material, RIGID)
+            
+            self.taichi_env.add_static(
+                file=static_cfg.file,
+                file_vis=getattr(static_cfg, 'file_vis', None),
+                pos=static_cfg.pos,
+                euler=static_cfg.euler,
+                scale=static_cfg.scale,
+                material=material,
+                has_dynamics=static_cfg.has_dynamics,
+                sdf_res=getattr(static_cfg, 'sdf_res', 128),
+            )
     
     def setup_bodies(self):
-        """设置流体"""
-        # 确定材料类型
-        material = self.material or self.cfg.material
-        if isinstance(material, str):
-            material_const = globals().get(material, WATER)
-        else:
-            material_const = material
-        
-        self.taichi_env.add_body(
-            type='cylinder',
-            center=(0.5, 0.55, 0.5),
-            height=0.4,
-            radius=0.07,
-            material=material_const,
-        )
+        """设置流体 - 从配置文件读取"""
+        for body_cfg in self.cfg.bodies:
+            # 确定材料类型：优先使用运行时传入的 material，否则用配置
+            material = self.material or body_cfg.material or self.cfg.material
+            if isinstance(material, str):
+                material_const = globals().get(material, WATER)
+            else:
+                material_const = material
+            
+            body_type = body_cfg.type
+            
+            # 根据 body 类型传递不同参数
+            if body_type == 'cylinder':
+                self.taichi_env.add_body(
+                    type='cylinder',
+                    center=body_cfg.center,
+                    height=body_cfg.height,
+                    radius=body_cfg.radius,
+                    material=material_const,
+                )
+            elif body_type == 'cube':
+                self.taichi_env.add_body(
+                    type='cube',
+                    lower=body_cfg.lower,
+                    upper=body_cfg.upper,
+                    material=material_const,
+                )
+            elif body_type == 'ball':
+                self.taichi_env.add_body(
+                    type='ball',
+                    center=body_cfg.center,
+                    radius=body_cfg.radius,
+                    material=material_const,
+                )
+            else:
+                raise ValueError(f"Unknown body type: {body_type}")
     
     def setup_boundary(self):
-        """设置边界"""
+        """设置边界 - 从配置文件读取"""
+        boundary_cfg = self.cfg.boundary
         self.taichi_env.setup_boundary(
-            type='cube',
-            lower=(0.05, 0.05, 0.05),
-            upper=(0.95, 0.95, 0.95),
+            type=boundary_cfg.type,
+            lower=boundary_cfg.lower,
+            upper=boundary_cfg.upper,
         )
     
     def setup_renderer(self):
-        """设置 GL 渲染器 - 使用自动计算的相机/光照位置"""
-        # 只传递非相机/光照参数，让 GLRenderer 自动计算位置
-        self.taichi_env.setup_renderer(
-            fov=30,
-            light_fov=20,
-        )
+        """设置 GL 渲染器 - 从配置文件读取"""
+        renderer_cfg = self.cfg.renderer
+        
+        # 构建渲染器参数
+        renderer_kwargs = {
+            'fov': renderer_cfg.fov,
+            'particle_radius': renderer_cfg.particle_radius,
+            'light_fov': renderer_cfg.light_fov,
+        }
+        
+        # 可选的相机/光照位置（如果配置了则使用，否则让渲染器自动计算）
+        if renderer_cfg.camera_pos:
+            renderer_kwargs['camera_pos'] = renderer_cfg.camera_pos
+        if renderer_cfg.camera_lookat:
+            renderer_kwargs['camera_lookat'] = renderer_cfg.camera_lookat
+        if renderer_cfg.light_pos:
+            renderer_kwargs['light_pos'] = renderer_cfg.light_pos
+        if renderer_cfg.light_lookat:
+            renderer_kwargs['light_lookat'] = renderer_cfg.light_lookat
+        
+        self.taichi_env.setup_renderer(**renderer_kwargs)
     
     def setup_loss(self):
         """设置损失函数 - 可以为空，使用 MDP 中的奖励"""
