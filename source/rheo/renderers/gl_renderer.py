@@ -10,6 +10,7 @@ from rheo.macros import *
 from .gl_renderer_src import flex_renderer
 import rheo.utils.geom as geom_utils
 import rheo.utils.misc as misc_utils
+from rheo.utils.misc import is_headless
 
 class GLRenderer:
     # Default parameter values for detecting if user provided custom values
@@ -305,8 +306,8 @@ class GLRenderer:
                 if effector.mesh is not None:
                     effector.mesh.gl_renderer_id = self.effector_mesh_ids[0][i]
 
-        # add smoke particles
-        if self.sim.smoke_field is not None:
+        # add smoke particles (skip in headless mode)
+        if self.sim.smoke_field is not None and not is_headless():
             num_smoke_particles = self.sim.smoke_field.vis_particles.shape[0]
             positions           = self.sim.smoke_field.vis_particles.to_numpy().flatten()
             colors              = self.sim.smoke_field.vis_particles_c.to_numpy().flatten()
@@ -355,12 +356,20 @@ class GLRenderer:
         # FPS 显示已移到 keyboard.py 终端输出，这里不再打印
 
     def render_frame(self, mode='human', x_target=None, t=0):
+        # Headless 模式检查: 跳过所有渲染和 NumPy 转换
+        if is_headless():
+            return None
+        
         self.rotate_camera(t)
 
         # particles - merge all environments with spatial offsets
         if self.sim.has_particles:
             state_render = self.sim.get_state_render(self.sim.cur_substep_local)
+            if state_render is None:
+                # Headless mode: no render buffer allocated
+                return None
             # state_render contains merged data for all envs
+            # GPU->CPU transfer only happens during actual rendering
             positions = state_render.x.to_numpy()  # Shape: (num_envs * n_particles, 3)
             used = state_render.used.to_numpy()    # Shape: (num_envs * n_particles,)
             
@@ -407,8 +416,8 @@ class GLRenderer:
                             vertex_normals,
                         )
 
-        # smoke field
-        if self.sim.smoke_field is not None:
+        # smoke field (skip GPU->CPU transfer in headless mode)
+        if self.sim.smoke_field is not None and not is_headless():
             colors = self.sim.smoke_field.vis_particles_c.to_numpy()
             flex_renderer.update_smoke_particles(colors)
 

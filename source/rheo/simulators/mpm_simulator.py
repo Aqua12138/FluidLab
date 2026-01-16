@@ -1139,6 +1139,98 @@ class MPMSimulator:
             state['smoke_field'] = self.smoke_field.get_state(s)
         return state
 
+    # --------------------------------- GPU-Only (Zero-Copy) Methods -----------------------------------
+    
+    def _ensure_torch_buffers(self, device='cuda'):
+        """Lazy initialization of PyTorch buffers for zero-copy transfer."""
+        if not hasattr(self, '_torch_x') or self._torch_device != device:
+            self._torch_device = device
+            if self.has_particles:
+                # Single env buffers
+                self._torch_x_single = torch.zeros(
+                    (self.n_particles, self.dim), dtype=DTYPE_TC, device=device
+                )
+                self._torch_v_single = torch.zeros(
+                    (self.n_particles, self.dim), dtype=DTYPE_TC, device=device
+                )
+                self._torch_used_single = torch.zeros(
+                    (self.n_particles,), dtype=torch.int32, device=device
+                )
+                # All envs buffers
+                self._torch_x = torch.zeros(
+                    (self.num_envs, self.n_particles, self.dim), dtype=DTYPE_TC, device=device
+                )
+                self._torch_v = torch.zeros(
+                    (self.num_envs, self.n_particles, self.dim), dtype=DTYPE_TC, device=device
+                )
+                self._torch_used = torch.zeros(
+                    (self.num_envs, self.n_particles), dtype=torch.int32, device=device
+                )
+    
+    def get_state_RL_torch(self, env_id=0, device='cuda'):
+        """Get RL state for a single environment as PyTorch CUDA tensors (zero-copy).
+        
+        Args:
+            env_id: Environment index
+            device: Target device ('cuda' or 'cpu')
+            
+        Returns:
+            dict with 'x', 'v', 'used' as torch.Tensor on specified device
+        """
+        self._ensure_torch_buffers(device)
+        f = self.cur_substep_local
+        state = {}
+        
+        if self.has_particles:
+            # Use kernel to write directly to PyTorch tensor (zero-copy on GPU)
+            self.get_state_RL_kernel(
+                env_id, f, 
+                self._torch_x_single, 
+                self._torch_v_single, 
+                self._torch_used_single
+            )
+            state['x'] = self._torch_x_single
+            state['v'] = self._torch_v_single
+            state['used'] = self._torch_used_single
+        
+        if self.agent is not None:
+            state['agent'] = self.agent.get_state_torch(f, device) if hasattr(self.agent, 'get_state_torch') else self.agent.get_state(f)
+        
+        return state
+    
+    def get_state_RL_all_envs_torch(self, device='cuda'):
+        """Get RL state for all environments as PyTorch CUDA tensors (zero-copy).
+        
+        Args:
+            device: Target device ('cuda' or 'cpu')
+            
+        Returns:
+            dict with 'x', 'v', 'used' as torch.Tensor on specified device
+            - x: (num_envs, n_particles, dim)
+            - v: (num_envs, n_particles, dim)
+            - used: (num_envs, n_particles)
+        """
+        self._ensure_torch_buffers(device)
+        f = self.cur_substep_local
+        state = {}
+        
+        if self.has_particles:
+            # Use kernel to write directly to PyTorch tensor (zero-copy on GPU)
+            self.get_state_RL_all_envs_kernel(
+                f, 
+                self._torch_x, 
+                self._torch_v, 
+                self._torch_used
+            )
+            state['x'] = self._torch_x
+            state['v'] = self._torch_v
+            state['used'] = self._torch_used
+        
+        if self.agent is not None:
+            state['agent'] = self.agent.get_state_torch(f, device) if hasattr(self.agent, 'get_state_torch') else self.agent.get_state(f)
+        
+        return state
+
     @ti.kernel
     def get_state_render_kernel(self, f: ti.i32):
         """Get render state for all environments - merged into single buffer for rendering."""

@@ -144,7 +144,9 @@ class RheoEnvCfg:
     # Loss 配置
     loss_type: str = "diff"  # diff, default
     loss_enabled: bool = True
-
+    
+    # Checkpoint 配置
+    ckpt_dest: str = 'gpu'  # 'gpu', 'cpu', 'disk'
 
 def cfg_to_dict(cfg) -> dict:
     """将 dataclass 配置转换为字典"""

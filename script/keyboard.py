@@ -88,6 +88,13 @@ def parse_args():
         default=0.01,
         help="角速度幅值 (默认: 0.01)"
     )
+    parser.add_argument(
+        "--device",
+        type=str,
+        default='cuda',
+        choices=['cuda', 'cpu'],
+        help="计算设备 (默认: cuda, 使用 GPU-only 模式)"
+    )
     
     return parser.parse_args()
 
@@ -126,10 +133,13 @@ def main():
         "num_envs": args.num_envs,
         "enable_grad": enable_grad,
         "seed": args.seed,
+        "device": args.device,  # GPU-only 模式
     }
     
     if args.material:
         env_kwargs["material"] = args.material
+    
+    print(f"设备: {args.device} ({'GPU-only 模式' if args.device == 'cuda' else 'Legacy CPU 模式'})")
     
     env = gym.make(args.task, **env_kwargs)
     

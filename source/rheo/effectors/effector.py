@@ -201,6 +201,25 @@ class Effector:
         out = np.zeros((7), dtype=DTYPE_NP)
         self.get_state_kernel(f, out)
         return out
+    
+    def get_state_torch(self, f, device='cuda'):
+        """Get effector state as PyTorch tensor (GPU-only mode).
+        
+        Args:
+            f: Frame index
+            device: Target device ('cuda' or 'cpu')
+            
+        Returns:
+            torch.Tensor of shape (7,) containing [pos(3), quat(4)]
+        """
+        # Lazy initialize torch buffer
+        if not hasattr(self, '_torch_state_buffer') or self._torch_state_device != device:
+            self._torch_state_device = device
+            self._torch_state_buffer = torch.zeros(7, dtype=DTYPE_TC, device=device)
+        
+        # Use kernel to write directly to torch tensor
+        self.get_state_kernel(f, self._torch_state_buffer)
+        return self._torch_state_buffer
 
     def set_state(self, f, state):
         ss = self.get_state(f)

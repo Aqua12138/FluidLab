@@ -82,6 +82,17 @@ class Agent:
         return sum([i.state_dim for i in self.effectors])
 
     def set_action(self, s, s_global, n_substeps, action):
+        """Set action for all effectors.
+        
+        Args:
+            s: Step local
+            s_global: Step global
+            n_substeps: Number of substeps
+            action: Action array (np.ndarray or torch.Tensor)
+        """
+        # Handle both numpy and torch inputs
+        if isinstance(action, torch.Tensor):
+            action = action.cpu().numpy() if action.is_cuda else action.numpy()
         action = np.asarray(action).reshape(-1)
         assert len(action) == self.action_dims[-1], 'Action length does not match agent specifications.'
         for i in range(self.n_effectors):
@@ -123,6 +134,26 @@ class Agent:
         out = []
         for i in range(self.n_effectors):
             out.append(self.effectors[i].get_state(f))
+        return out
+    
+    def get_state_torch(self, f, device='cuda'):
+        """Get agent state as PyTorch tensor (GPU-only mode).
+        
+        Args:
+            f: Frame index
+            device: Target device ('cuda' or 'cpu')
+            
+        Returns:
+            List of torch.Tensor for each effector state
+        """
+        out = []
+        for i in range(self.n_effectors):
+            if hasattr(self.effectors[i], 'get_state_torch'):
+                out.append(self.effectors[i].get_state_torch(f, device))
+            else:
+                # Fallback: convert numpy to torch
+                state_np = self.effectors[i].get_state(f)
+                out.append(torch.from_numpy(state_np).to(device=device))
         return out
 
     def set_state(self, f, state):
