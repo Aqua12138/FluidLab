@@ -90,8 +90,8 @@ class TableMaterialsEnvCfg(RheoEnvCfg):
     
     # 渲染器配置 (GL 渲染器)
     renderer: RendererCfg = field(default_factory=lambda: RendererCfg(
-        camera_pos=(0.5, 0.8, 3.0),
-        camera_lookat=(0.5, 0.3, 0.5),
+        # camera_pos=(0.5, 0.8, 3.0),
+        # camera_lookat=(0.5, 0.3, 0.5),
         fov=30.0,
         particle_radius=0.004,
     ))

@@ -97,14 +97,14 @@ class BoundaryCfg:
 @dataclass
 class RendererCfg:
     """GL 渲染器配置"""
-    camera_pos: Tuple[float, float, float] = (-0.15, 2.82, 2.5)
-    camera_lookat: Tuple[float, float, float] = (0.5, 0.5, 0.5)
+    # camera_pos: Tuple[float, float, float] = (-0.15, 2.82, 2.5)
+    # camera_lookat: Tuple[float, float, float] = (0.5, 0.5, 0.5)
     fov: float = 30.0
     particle_radius: float = 0.0075
     
     # Light configuration
-    light_pos: Tuple[float, float, float] = (3.5, 15.0, 0.55)
-    light_lookat: Tuple[float, float, float] = (0.5, 0.5, 0.49)
+    # light_pos: Tuple[float, float, float] = (3.5, 15.0, 0.55)
+    # light_lookat: Tuple[float, float, float] = (0.5, 0.5, 0.49)
     light_fov: float = 20.0
 
 

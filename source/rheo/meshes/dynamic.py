@@ -19,20 +19,14 @@ class Dynamic(Mesh):
         super(Dynamic, self).init_transform()
         self.vertices = ti.Vector.field(3, dtype=ti.f32, shape=(self.n_vertices))
         self.vertex_normals = ti.Vector.field(3, dtype=ti.f32, shape=(self.n_vertices))
-        
-        # 预分配 numpy 缓冲区，避免每帧创建新数组（减少 CPU-GPU 传输开销）
-        self._vertices_np = np.zeros((self.n_vertices, 3), dtype=np.float32)
-        self._vertex_normals_np = np.zeros((self.n_vertices, 3), dtype=np.float32)
     
     def get_vertices_np(self):
-        """获取顶点数据到预分配缓冲区（避免每帧分配新数组）"""
-        self.vertices.to_numpy(self._vertices_np)
-        return self._vertices_np
+        """获取顶点数据"""
+        return self.vertices.to_numpy()
     
     def get_vertex_normals_np(self):
-        """获取法线数据到预分配缓冲区"""
-        self.vertex_normals.to_numpy(self._vertex_normals_np)
-        return self._vertex_normals_np
+        """获取法线数据"""
+        return self.vertex_normals.to_numpy()
 
     @ti.kernel
     def update_vertices(self, f: ti.i32):

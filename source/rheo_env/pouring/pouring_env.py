@@ -134,13 +134,10 @@ class PouringEnv(RheoEnvBase):
         )
     
     def setup_renderer(self):
-        """设置 GL 渲染器"""
+        """设置 GL 渲染器 - 使用自动计算的相机/光照位置"""
+        # 只传递非相机/光照参数，让 GLRenderer 自动计算位置
         self.taichi_env.setup_renderer(
-            camera_pos=(-0.15, 2.82, 2.5),
-            camera_lookat=(0.5, 0.5, 0.5),
             fov=30,
-            light_pos=(3.5, 15.0, 0.55),
-            light_lookat=(0.5, 0.5, 0.49),
             light_fov=20,
         )
     
